@@ -1,3 +1,5 @@
+// Copyright (c) 2020 Red Hat, Inc.
+// Copyright Contributors to the Open Cluster Management project
 package retriever
 
 import (
@@ -19,6 +21,7 @@ import (
 
 type Retriever struct {
 	CCXUrl                  string
+	client                  *http.Client
 	token                   string // token to connect to CRC
 	tokenValidationInterval time.Duration
 }
@@ -34,6 +37,7 @@ func NewRetriever() *Retriever {
 	r := &Retriever{
 		tokenValidationInterval: 5 * time.Second,
 	}
+	r.client = &http.Client{}
 	if err := r.setUpRetriever(); err != nil {
 		glog.Warningf("Unable to update mnaged clusters: %v", err)
 	}
@@ -97,16 +101,14 @@ func (r *Retriever) RetrieveCCXReport(input chan string, output chan types.Polic
 	for {
 		var responseBody types.ResponseBody
 		var policy types.Policy
-		client := &http.Client{}
 		clusterId := <-input
 		// If the cluster id is empty do nothing
 		if clusterId == "" {
 			return
 		}
+		ua := "insights-operator/v1.0.0+alpha cluster/" + clusterId
 		glog.Infof("Start Retrieving CCXReport for cluster %s", clusterId)
-		url := r.CCXUrl
-		method := "POST"
-		glog.V(2).Info("Insights using URL :", string(url))
+		glog.V(2).Info("Insights using URL :", string(r.CCXUrl))
 		mockClusters := PostBody{
 			Clusters: []string{
 				clusterId,
@@ -114,23 +116,21 @@ func (r *Retriever) RetrieveCCXReport(input chan string, output chan types.Polic
 		}
 		reqBody, _ := json.Marshal(mockClusters)
 
-		req, err := http.NewRequest(method, url, bytes.NewBuffer(reqBody))
+		req, err := http.NewRequest("POST", r.CCXUrl, bytes.NewBuffer(reqBody))
 		if err != nil {
 			glog.Infof("Error creating HttpRequest %v", err)
 			continue
 		}
 		req.Header.Add("Content-Type", "application/json")
-		req.Header.Add("User-Agent", "insights-operator/v1.0.0+alpha cluster/089242aa-cf78-4231-a9d3-a2847193530a")
+		req.Header.Add("User-Agent", ua)
 		req.Header.Add("Authorization", "Bearer "+r.token)
 
-		res, err := client.Do(req)
+		res, err := r.client.Do(req)
 		if err != nil {
 			glog.Infof("Error sending HttpRequest %v", err)
 			continue
 		}
 		defer res.Body.Close()
-
-		// return []byte of response body
 		data, _ := ioutil.ReadAll(res.Body)
 		// unmarshal response data into the ResponseBody struct
 		unmarshalError := json.Unmarshal(data, &responseBody)
