@@ -25,7 +25,7 @@ func main() {
 	}
 	defer glog.Flush()
 
-	glog.Info("Starting insights-collector")
+	glog.Info("Starting insights-client")
 	if commit, ok := os.LookupEnv("VCS_REF"); ok {
 		glog.Info("Built from git commit: ", commit)
 	}
@@ -62,7 +62,8 @@ func main() {
 	}
 
 	glog.Info("insights-client listening on", config.Cfg.ServicePort)
-	log.Fatal(srv.ListenAndServeTLS("./sslcert/tls.crt", "./sslcert/tls.key"))
+	log.Fatal(srv.ListenAndServeTLS("./sslcert/tls.crt", "./sslcert/tls.key"),
+		" Use ./setup.sh to generate certificates for local development.")
 
 	// Wait for the process to run until killed
 	<-done

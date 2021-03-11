@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Red Hat, Inc.
+// Copyright (c) 2021 Red Hat, Inc.
 // Copyright Contributors to the Open Cluster Management project
 package retriever
 
@@ -118,7 +118,7 @@ func (r *Retriever) RetrieveCCXReport(input chan string, output chan types.Polic
 
 		req, err := http.NewRequest("POST", r.CCXUrl, bytes.NewBuffer(reqBody))
 		if err != nil {
-			glog.Infof("Error creating HttpRequest %v", err)
+			glog.Warningf("Error creating HttpRequest for cluster %s, %v", clusterId, err)
 			continue
 		}
 		req.Header.Add("Content-Type", "application/json")
@@ -127,7 +127,7 @@ func (r *Retriever) RetrieveCCXReport(input chan string, output chan types.Polic
 
 		res, err := r.client.Do(req)
 		if err != nil {
-			glog.Infof("Error sending HttpRequest %v", err)
+			glog.Warningf("Error sending HttpRequest for cluster %s, %v", clusterId, err)
 			continue
 		}
 		defer res.Body.Close()

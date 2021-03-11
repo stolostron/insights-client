@@ -1,4 +1,5 @@
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2021 Red Hat, Inc.
+# Copyright Contributors to the Open Cluster Management project
 
 BINDIR ?= output
 
@@ -17,12 +18,12 @@ default::
 
 .PHONY: deps
 deps:
-	GO111MODULE=on go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.24.0
-	GO111MODULE=on go mod tidy
+	 go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.24.0
+	 go mod tidy
 
 .PHONY: insights-client
 insights-client:
-	GO111MODULE=on CGO_ENABLED=0 go build -a -v -i -installsuffix cgo -ldflags '-s -w' -o $(BINDIR)/insights-client ./
+	 CGO_ENABLED=0 go build -a -v -i -installsuffix cgo -ldflags '-s -w' -o $(BINDIR)/insights-client ./
 
 .PHONY: build
 build: insights-client
@@ -34,22 +35,19 @@ build-linux:
 .PHONY: lint
 lint:
 	# Flag GOGC=75 needed to avoid out of memory issue.
-	GO111MODULE=on GOGC=100 golangci-lint run --timeout=2m
+	 GOGC=100 golangci-lint run --timeout=2m
 
 run:
-	GO111MODULE=on go run main.go
+	 go run main.go
 
 .PHONY: test
 test:
-	GO111MODULE=on go test ./... -v -coverprofile cover.out
+	 go test ./... -v -coverprofile cover.out
 
 .PHONY: coverage
 coverage:
-	GO111MODULE=on go tool cover -html=cover.out -o=cover.html
+	 go tool cover -html=cover.out -o=cover.html
 
-.PHONY: copyright-check
-copyright-check:
-	./build/copyright-check.sh
 
 .PHONY: clean
 clean::

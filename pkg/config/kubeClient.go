@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Red Hat, Inc.
+// Copyright (c) 2021 Red Hat, Inc.
 // Copyright Contributors to the Open Cluster Management project
 package config
 
@@ -37,6 +37,7 @@ func RESTClient(cfg *rest.Config) *rest.RESTClient {
 	scheme := runtime.NewScheme()
 	SchemeBuilder := runtime.NewSchemeBuilder(addKnownTypes)
 	if err := SchemeBuilder.AddToScheme(scheme); err != nil {
+		glog.Warningf("Cannot add scheme %v", err)
 		return nil
 	}
 	config := *cfg
@@ -46,7 +47,7 @@ func RESTClient(cfg *rest.Config) *rest.RESTClient {
 	config.NegotiatedSerializer = serializer.NewCodecFactory(scheme)
 	restClient, err := rest.RESTClientFor(&config)
 	if err != nil {
-		glog.Warningf("Error creating RestClient ")
+		glog.Warningf("Error creating RestClient %v", err)
 		return nil
 	}
 	return restClient

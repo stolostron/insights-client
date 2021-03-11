@@ -1,3 +1,5 @@
+# Copyright Contributors to the Open Cluster Management project
+
 os:
   - linux
 
@@ -12,7 +14,7 @@ addons:
   sonarcloud:
     organization: "open-cluster-management"
     token:
-      secure: "gl+h/7tW7XCnlPgbWeVgXnbkY/ExVOGbXX5muiLuZxe1F8t8B4NEJRNyVAouIx930y3T9W4Ce0dAkVMOsQRJdsgAZACu0ikJs3mX1BSS4esO+SMcGbchq67mzIXGmisOZFkYKn1Euy1JmlF79NRYh0Z31h+jzeB+FjN2GDpuRKXRBOcJPltSYJySCyrouH5gdLAmpAVi+YG5unJRprBpeoM+1c2r1m5EwZqe0AonTCxy9eAkYKcotGEr4GTkXZufxQJTdgvzVEfXVbWrXz+AVSZboQhr/f38hYhFHyvebiGrSapzW52MiS91nJvskK6VflH+QYEyrMja3+yxsMW7ru9EJZEV9C018LCR9XWiutKacnrf/+rhLcBVCpdEKysa8Gg/fKzstwcBpF86UsptsyoIdM+8+ZzMS0tJzGoxDJWPUjoMcvKOoWKmZl1xun+BwiEywY890HhpnRB1mOU6Th+yn3ePuam3jrF0uYV4UHsV8kqsZjQouNVufLLzyFmJDhI6bVDlQnM+zNaqL4scDj6uk6nqOEnKiiy7KXZ54sU2xjWl/04l5zwErKB0x3ZhbzJwDNQwyvcy7rgC4nIW3WPsDzfG1zhdLRtzEsHyGwwsk2d11haORCEyhNamUwpLDPKlZyWhdAePPBszPsG1ZQ28rCLOsQHTFEX1tjVpXL4="
+      secure: "Mkhnn3nG95bDBBHZaRn1VY6QX+q5IRlDyvtRFZhDhfQVulF5VTboY75uJCifQl093OfyPGJOarwK+2BQbhlfsZuGJMRHICc5qqPpj4SUWMIq8jRSr+zUEqrqgR2Q1QSb8XFPJl9v2WUPg4PyUY7GfgFAOi40rkyvarphjCQb6EIVGNvPHXIh6N+hopZ6mlnE3H7vzHBT9yE9DWS8NKg7KncXTNF/CoBwoWxL24V+aSMSknRpUE6EZRGjbyZzxYf8De3dnoNVlB21e1UMtzc0owG3xYxNsDgv7Las7FXM2LRy50uX7/Awhsj5CtZWDYwX/aA5RilNcE0Nw/WtKln/ylpnxG3GrBWPOCUxGcIEG4yT/6+pid7Q9ggQQVItOToDCYgJo3qvtnfPRqWTwRBoWon6B0d84RE0d+DWhSWl54SrOGV2KyZoXaKVxYZOkVONMl0qUc1rU789Nu/uALQErzDYbb0Z2MPxUmrwVRQV1NLTdbIlJaaRLSFMoL6r1H4SAkkNa43HVarK42kyaOi8LAa0qWgc0hb3ejUsw2IQCPEJ+FlQzv+j1iDwzbZm7BnIH3NK3+ix7J7usYemePuWLWvUjschFV8qL8kMU0hFLwMwSFawE8FFJqSSLmsp8B5oMsfUSiIvNvLKaxENjMOFI0WG4nCQGL5ITpS/5bBEAqY="
 
 branches:
   only:
@@ -60,8 +62,6 @@ jobs:
       name: "Run unit tests"
       script:
         # Bootstrap the build harness, pull test image, and run unit tests.  
-        - make copyright-check
-        # - make component/pull 
         - make component/test/unit
         - make security/scans
         - make sonar/go  

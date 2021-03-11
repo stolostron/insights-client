@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Red Hat, Inc.
+// Copyright (c) 2021 Red Hat, Inc.
 // Copyright Contributors to the Open Cluster Management project
 package config
 
@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	DEFAULT_SERVICE_PORT = ":3010"
+	DEFAULT_SERVICE_PORT = ":3030"
 	DEFAULT_HTTP_TIMEOUT = 300000                                  // 5 min, to fix the EOF response at the collector
 	DEFAULT_USE_MOCK     = false                                   // Use Mocked Cluster ID ?
 	DEFAULT_CCX_SERVER   = "http://localhost:8080/api/v1/clusters" // For local use only
