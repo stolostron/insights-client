@@ -2,17 +2,7 @@
 // Copyright Contributors to the Open Cluster Management project
 package mocks
 
-import (
-	"encoding/json"
-	"io/ioutil"
-	"os"
-
-	"github.com/open-cluster-management/insights-client/pkg/types"
-
-	"github.com/golang/glog"
-)
-
-func getMockData(clusterId string) types.ResponseBody {
+/*func getMockData(clusterId string) types.ResponseBody {
 
 	var response types.ResponseBody
 	jsonFile, err := os.Open("./pkg/utils/" + clusterId + ".json")
@@ -27,4 +17,4 @@ func getMockData(clusterId string) types.ResponseBody {
 		glog.Fatalf("Unable to unmarshal mockclusters json %v", err)
 	}
 	return response
-}
+}*/

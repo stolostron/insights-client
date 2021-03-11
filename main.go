@@ -29,10 +29,6 @@ func main() {
 	if commit, ok := os.LookupEnv("VCS_REF"); ok {
 		glog.Info("Built from git commit: ", commit)
 	}
-	// Done channel for waiting
-	done := make(chan bool)
-	//fetch := make(chan string)
-	//reports := make(chan types.PolicyInfo)
 
 	retriever.NewRetriever()
 	//go retriever.RetrieveCCXReport(fetch, reports)
@@ -65,6 +61,4 @@ func main() {
 	log.Fatal(srv.ListenAndServeTLS("./sslcert/tls.crt", "./sslcert/tls.key"),
 		" Use ./setup.sh to generate certificates for local development.")
 
-	// Wait for the process to run until killed
-	<-done
 }

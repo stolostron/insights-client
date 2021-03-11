@@ -50,7 +50,10 @@ func (r *Retriever) setUpRetriever() error {
 		go func() {
 			ticker := time.NewTicker(r.tokenValidationInterval)
 			for ; true; <-ticker.C {
-				r.StartTokenRefresh()
+				err := r.StartTokenRefresh()
+				if err != nil {
+					glog.Warningf("Error Refreshing CRC credentials  ")
+				}
 			}
 		}()
 	}
