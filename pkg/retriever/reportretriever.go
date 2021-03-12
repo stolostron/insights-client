@@ -62,7 +62,8 @@ func (r *Retriever) setUpRetriever() error {
 
 func (c *Retriever) StartTokenRefresh() error {
 	glog.Infof("Refreshing CRC credentials  ")
-	secret, err := config.GetKubeClient().CoreV1().Secrets("openshift-config").Get(context.TODO(), "pull-secret", metav1.GetOptions{})
+	secret, err := config.GetKubeClient().CoreV1().Secrets("openshift-config").
+		Get(context.TODO(), "pull-secret", metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			glog.V(2).Infof("pull-secret does not exist")

@@ -15,7 +15,6 @@ func LivenessProbe(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "OK")
 }
 
-// ReadinessProbe checks if connection to CCX is established - TODO is this right??
 func ReadinessProbe(w http.ResponseWriter, r *http.Request) {
 	glog.V(2).Info("readinessProbe - Checking CCX connection.")
 

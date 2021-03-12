@@ -29,6 +29,8 @@ type Config struct {
 // Cfg service configuration
 var Cfg = Config{}
 
+var Message = "Using %s from environment: %s"
+
 func init() {
 	// If environment variables are set, use those values constants
 	// Simply put, the order of preference is env -> default constants (from left to right)
@@ -47,7 +49,7 @@ func init() {
 
 func setDefault(field *string, env, defaultVal string) {
 	if val := os.Getenv(env); val != "" {
-		glog.Infof("Using %s from environment: %s", env, val)
+		glog.Infof(Message, env, val)
 		*field = val
 	} else if *field == "" && defaultVal != "" {
 		glog.Infof("%s not set, using default value: %s", env, defaultVal)
@@ -55,10 +57,9 @@ func setDefault(field *string, env, defaultVal string) {
 	}
 }
 
-// TODO: Combine with function above.
 func setDefaultInt(field *int, env string, defaultVal int) {
 	if val := os.Getenv(env); val != "" {
-		glog.Infof("Using %s from environment: %s", env, val)
+		glog.Infof(Message, env, val)
 		var err error
 		*field, err = strconv.Atoi(val)
 		if err != nil {
@@ -72,7 +73,7 @@ func setDefaultInt(field *int, env string, defaultVal int) {
 
 func setDefaultBool(field *bool, env string, defaultVal bool) {
 	if val := os.Getenv(env); val != "" {
-		glog.Infof("Using %s from environment: %s", env, val)
+		glog.Infof(Message, env, val)
 		var err error
 		*field, err = strconv.ParseBool(val)
 		if err != nil {
