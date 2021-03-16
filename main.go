@@ -30,7 +30,7 @@ func main() {
 		glog.Info("Built from git commit: ", commit)
 	}
 
-	retriever.NewRetriever()
+	retriever.NewRetriever(config.Cfg.CCXServer, nil, 2*time.Second)
 	//go retriever.RetrieveCCXReport(fetch, reports)
 
 	router := mux.NewRouter()

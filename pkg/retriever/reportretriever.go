@@ -21,9 +21,9 @@ import (
 
 type Retriever struct {
 	CCXUrl                  string
-	client                  *http.Client
-	token                   string // token to connect to CRC
-	tokenValidationInterval time.Duration
+	Client                  *http.Client
+	Token                   string // token to connect to CRC
+	TokenValidationInterval time.Duration
 }
 
 type serializedAuthMap struct {
@@ -33,34 +33,21 @@ type serializedAuth struct {
 	Auth string `json:"auth"`
 }
 
-func NewRetriever() *Retriever {
-	r := &Retriever{
-		tokenValidationInterval: 5 * time.Second,
+func NewRetriever(ccxurl string, client *http.Client, tokenValidationInterval time.Duration) *Retriever {
+	if client == nil {
+		client = &http.Client{}
 	}
-	r.client = &http.Client{}
-	if err := r.setUpRetriever(); err != nil {
-		glog.Warningf("Unable to update mnaged clusters: %v", err)
+	r := &Retriever{
+		TokenValidationInterval: tokenValidationInterval,
+		Client:                  client,
+	}
+	if err := r.StartTokenRefresh(); err != nil {
+		glog.Warningf("Unable to get CRC Token: %v", err)
 	}
 	return r
 }
 
-func (r *Retriever) setUpRetriever() error {
-	r.CCXUrl = config.Cfg.CCXServer
-	if !config.Cfg.UseMock {
-		go func() {
-			ticker := time.NewTicker(r.tokenValidationInterval)
-			for ; true; <-ticker.C {
-				err := r.StartTokenRefresh()
-				if err != nil {
-					glog.Warningf("Error Refreshing CRC credentials  ")
-				}
-			}
-		}()
-	}
-	return nil
-}
-
-func (c *Retriever) StartTokenRefresh() error {
+func (r *Retriever) StartTokenRefresh() error {
 	glog.Infof("Refreshing CRC credentials  ")
 	secret, err := config.GetKubeClient().CoreV1().Secrets("openshift-config").
 		Get(context.TODO(), "pull-secret", metav1.GetOptions{})
@@ -89,7 +76,7 @@ func (c *Retriever) StartTokenRefresh() error {
 				}
 				if len(token) > 0 {
 					glog.V(2).Info("Found cloud.openshift.com token ")
-					c.token = token
+					r.Token = token
 				}
 			}
 		}
@@ -97,64 +84,92 @@ func (c *Retriever) StartTokenRefresh() error {
 	return nil
 }
 
-type PostBody struct {
-	Clusters []string `json:"clusters"`
-}
-
 func (r *Retriever) RetrieveCCXReport(input chan string, output chan types.PolicyInfo) {
 	for {
-		var responseBody types.ResponseBody
-		var policy types.Policy
+
 		clusterId := <-input
 		// If the cluster id is empty do nothing
 		if clusterId == "" {
 			return
 		}
-		ua := "insights-operator/v1.0.0+alpha cluster/" + clusterId
-		glog.Infof("Start Retrieving CCXReport for cluster %s", clusterId)
-		glog.V(2).Info("Insights using URL :", string(r.CCXUrl))
-		mockClusters := PostBody{
-			Clusters: []string{
-				clusterId,
-			},
-		}
-		reqBody, _ := json.Marshal(mockClusters)
-
-		req, err := http.NewRequest("POST", r.CCXUrl, bytes.NewBuffer(reqBody))
+		req, err := r.GetInsightsRequest(context.TODO(), r.CCXUrl, clusterId)
 		if err != nil {
 			glog.Warningf("Error creating HttpRequest for cluster %s, %v", clusterId, err)
 			continue
 		}
-		req.Header.Add("Content-Type", "application/json")
-		req.Header.Add("User-Agent", ua)
-		req.Header.Add("Authorization", "Bearer "+r.token)
-
-		res, err := r.client.Do(req)
+		response, err := r.CallInsights(req, clusterId)
 		if err != nil {
 			glog.Warningf("Error sending HttpRequest for cluster %s, %v", clusterId, err)
 			continue
 		}
-		defer res.Body.Close()
-		data, _ := ioutil.ReadAll(res.Body)
-		// unmarshal response data into the ResponseBody struct
-		unmarshalError := json.Unmarshal(data, &responseBody)
-		if unmarshalError != nil {
-			glog.Error(unmarshalError)
-			glog.Error(bytes.NewBuffer(reqBody))
+
+		policyInfo, err := r.GetPolicyInfo(response, clusterId)
+		if err != nil {
+			glog.Warningf("Error creating PolicyInfo for cluster %s, %v", clusterId, err)
+			continue
 		}
 
-		// loop through the clusters in the response and create the PolicyReport node for each violation
-		for cluster := range responseBody.Reports {
+		output <- policyInfo
+	}
+}
+
+func (r *Retriever) GetInsightsRequest(ctx context.Context, endpoint string, clusterId string) (*http.Request, error) {
+	glog.Infof("Creating Request for cluster %s using Insights URL %s :", clusterId, r.CCXUrl)
+	mockClusters := types.PostBody{
+		Clusters: []string{
+			clusterId,
+		},
+	}
+	reqBody, _ := json.Marshal(mockClusters)
+	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(reqBody))
+	if err != nil {
+		glog.Warningf("Error creating HttpRequest for cluster %s, %v", clusterId, err)
+		return nil, err
+	}
+	user_agent := "insights-operator/v1.0.0+alpha cluster/" + clusterId
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", user_agent)
+	req.Header.Set("Authorization", "Bearer "+r.Token)
+	return req, nil
+}
+
+func (r *Retriever) CallInsights(req *http.Request, clusterId string) (types.ResponseBody, error) {
+	glog.Infof("Calling Insights for cluster %s :", clusterId)
+	var responseBody types.ResponseBody
+	res, err := r.Client.Do(req)
+	if err != nil {
+		glog.Warningf("Error sending HttpRequest for cluster %s, %v", clusterId, err)
+		return types.ResponseBody{}, err
+	}
+	defer res.Body.Close()
+	data, _ := ioutil.ReadAll(res.Body)
+	// unmarshal response data into the ResponseBody struct
+	unmarshalError := json.Unmarshal(data, &responseBody)
+	if unmarshalError != nil {
+		glog.Errorf("Error unmarshalling ResponseBody %v", unmarshalError)
+		return types.ResponseBody{}, unmarshalError
+	}
+	return responseBody, err
+}
+
+func (r *Retriever) GetPolicyInfo(responseBody types.ResponseBody, clusterId string) (types.PolicyInfo, error) {
+	glog.Infof("Create Policy Info for cluster %s :", clusterId)
+	var policy types.Policy
+	policyInfo := types.PolicyInfo{}
+
+	// loop through the clusters in the response and create the PolicyReport node for each violation
+	for cluster := range responseBody.Reports {
+		if cluster == clusterId {
 			// convert report data into []byte
 			reportBytes, _ := json.Marshal(responseBody.Reports[cluster])
 			// unmarshal response data into the Policy struct
-			unmarshalReportError := json.Unmarshal(reportBytes, &policy)
-			if err != nil {
-				glog.Infof("Error %s", unmarshalReportError)
+			unmarshalError := json.Unmarshal(reportBytes, &policy)
+			if unmarshalError != nil {
+				glog.Infof("Error unmarshalling Policy %v for cluster %s ", unmarshalError, clusterId)
+				return policyInfo, unmarshalError
 			}
-			glog.V(2).Infof("Received PolicyInfo for cluster %s", cluster)
-			policyInfo := types.PolicyInfo{Policy: policy, ClusterId: cluster}
-			output <- policyInfo
+			policyInfo = types.PolicyInfo{Policy: policy, ClusterId: cluster}
 		}
 	}
+	return policyInfo, nil
 }

@@ -38,3 +38,7 @@ type PolicyReport struct {
 	} `json:"metadata"`
 	Data []ReportData `json:"data"`
 }
+
+type PostBody struct {
+	Clusters []string `json:"clusters"`
+}
