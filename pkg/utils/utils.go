@@ -14,12 +14,10 @@ func GetMockData(clusterId string) []byte {
 
 	dirName := "../utils/"
 	fileName := clusterId + ".json"
-	jsonFile, err := os.Open(filepath.Join(dirName, fileName))
+	mock_data, err := ioutil.ReadFile(filepath.Join(dirName, fileName))
 	if err != nil {
 		pwd, _ := os.Getwd()
 		glog.Errorf("Error opening %s.json file in the dir %s ", clusterId, pwd)
 	}
-	defer jsonFile.Close()
-	mock_data, _ := ioutil.ReadAll(jsonFile)
 	return mock_data
 }

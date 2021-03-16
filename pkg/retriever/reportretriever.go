@@ -33,7 +33,7 @@ type serializedAuth struct {
 	Auth string `json:"auth"`
 }
 
-func NewRetriever(ccxurl string, client *http.Client, tokenValidationInterval time.Duration) *Retriever {
+func NewRetriever(ccxurl string, client *http.Client, tokenValidationInterval time.Duration, token string) *Retriever {
 	if client == nil {
 		client = &http.Client{}
 	}
@@ -41,9 +41,14 @@ func NewRetriever(ccxurl string, client *http.Client, tokenValidationInterval ti
 		TokenValidationInterval: tokenValidationInterval,
 		Client:                  client,
 	}
-	if err := r.StartTokenRefresh(); err != nil {
-		glog.Warningf("Unable to get CRC Token: %v", err)
+	if token == "" {
+		if err := r.StartTokenRefresh(); err != nil {
+			glog.Warningf("Unable to get CRC Token: %v", err)
+		}
+	} else {
+		r.Token = token
 	}
+
 	return r
 }
 
