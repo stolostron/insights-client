@@ -19,10 +19,10 @@ const (
 
 // Config - Define a config type to hold our config properties.
 type Config struct {
-	ServicePort string
-	HTTPTimeout int  // timeout when the http server should drop connections
-	UseMock     bool // Use Mock Server or actual endpoint
-	CCXServer   string
+	ServicePort string `env:"SERVICE_PORT"`
+	HTTPTimeout int    `env:"HTTP_TIMEOUT"` // timeout when the http server should drop connections
+	UseMock     bool   `env:"USE_MOCK"`     // Use Mock Server or actual endpoint
+	CCXServer   string `env:"CCX_SERVER"`
 	KubeConfig  string `env:"KUBECONFIG"` // Local kubeconfig path
 }
 

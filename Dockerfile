@@ -43,6 +43,6 @@ ENV VCS_REF="$VCS_REF" \
 ADD output/insights-client /bin
 
 
-EXPOSE 3010
+EXPOSE 3030
 USER ${USER_UID}
 ENTRYPOINT ["/bin/insights-client"]
