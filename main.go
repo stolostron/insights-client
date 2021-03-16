@@ -1,6 +1,7 @@
 package main
 
 import (
+    "context"
 	"crypto/tls"
 	"flag"
 	"fmt"
@@ -29,6 +30,14 @@ func main() {
 	if commit, ok := os.LookupEnv("VCS_REF"); ok {
 		glog.Info("Built from git commit: ", commit)
 	}
+
+    // Done channel for waiting
+    fetchClusterIDs := make(chan string)
+    // fetchPolicyReports := make(chan types.PolicyInfo)
+
+    ctx, _ := context.WithCancel(context.Background())
+    monitor := retriever.NewClusterMonitor()
+	go monitor.UpdateClusterIDs(ctx, fetchClusterIDs)
 
 	retriever.NewRetriever(config.Cfg.CCXServer, nil, 2*time.Second, "")
 	//go retriever.RetrieveCCXReport(fetch, reports)
@@ -60,5 +69,4 @@ func main() {
 	glog.Info("insights-client listening on", config.Cfg.ServicePort)
 	log.Fatal(srv.ListenAndServeTLS("./sslcert/tls.crt", "./sslcert/tls.key"),
 		" Use ./setup.sh to generate certificates for local development.")
-
 }
