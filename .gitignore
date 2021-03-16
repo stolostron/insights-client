@@ -1,0 +1,14 @@
+cover*
+output/
+# vendor/
+.build-harness
+build-harness/
+build-harness-extensions/
+.build-harness-bootstrap
+insights-client
+!vbh/.build-harness-vendorized
+!vbh/build-harness
+!vbh/build-harness-extensions
+sslcert/tls.crt
+sslcert/tls.key
+sslcert/tls.csr
