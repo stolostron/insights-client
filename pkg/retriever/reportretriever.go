@@ -126,9 +126,9 @@ func (r *Retriever) GetInsightsRequest(ctx context.Context, endpoint string, clu
 		glog.Warningf("Error creating HttpRequest for cluster %s, %v", clusterId, err)
 		return nil, err
 	}
-	user_agent := "insights-operator/v1.0.0+alpha cluster/" + clusterId
+	userAgent := "insights-operator/v1.0.0+alpha cluster/" + clusterId
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", user_agent)
+	req.Header.Set("User-Agent", userAgent)
 	req.Header.Set("Authorization", "Bearer "+r.Token)
 	return req, nil
 }

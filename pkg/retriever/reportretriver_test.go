@@ -21,11 +21,14 @@ func TestChangeSupportConfig(t *testing.T) {
 
 	postFunc := func(w http.ResponseWriter, r *http.Request) {
 		body, _ := ioutil.ReadAll(r.Body)
-		json.Unmarshal(body, &postBody)
-		w.Header().Set("Content-Type", "application/json")
+		err := json.Unmarshal(body, &postBody)
+		if err == nil {
+			w.Header().Set("Content-Type", "application/json")
 
-		response := mocks.GetMockData(string(postBody.Clusters[0]))
-		fmt.Fprintln(w, string(response))
+			response := mocks.GetMockData(string(postBody.Clusters[0]))
+			fmt.Fprintln(w, string(response))
+
+		}
 
 	}
 	ts := httptest.NewServer(http.HandlerFunc(postFunc))
