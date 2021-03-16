@@ -3,18 +3,23 @@
 package mocks
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/golang/glog"
 )
 
 func GetMockData(clusterId string) []byte {
 
-	dirName := "../utils/"
-	fileName := clusterId + ".json"
-	mock_data, err := ioutil.ReadFile(filepath.Join(dirName, fileName))
+	fileName := "../utils/" + clusterId + ".json"
+	cleanFile := filepath.Clean(fileName)
+	if !strings.HasPrefix(cleanFile, "../utils") {
+		panic(fmt.Errorf("Unsafe input"))
+	}
+	mock_data, err := ioutil.ReadFile(cleanFile)
 	if err != nil {
 		pwd, _ := os.Getwd()
 		glog.Errorf("Error opening %s.json file in the dir %s ", clusterId, pwd)
