@@ -1,0 +1,7 @@
+# Copyright Contributors to the Open Cluster Management project
+
+-include /opt/build-harness/Makefile.prow
+
+.PHONY: unit-test
+unit-test:
+	go test ./... -v -coverprofile cover.out
