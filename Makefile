@@ -50,3 +50,7 @@ clean::
 	go clean
 	rm -f cover*
 	rm -rf ./$(BINDIR)
+
+# Build the docker image
+docker-build: 
+	docker build -f Dockerfile . -t $(shell cat COMPONENT_NAME)
