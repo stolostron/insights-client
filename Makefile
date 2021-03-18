@@ -18,22 +18,19 @@ default::
 
 .PHONY: deps
 deps:
-	 go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.24.0
 	 go mod tidy
 
-.PHONY: insights-client
-insights-client:
-	 CGO_ENABLED=0 go build -a -v -i -installsuffix cgo -ldflags '-s -w' -o $(BINDIR)/insights-client ./
-
 .PHONY: build
-build: insights-client
+build:
+	 CGO_ENABLED=0 go build -o $(BINDIR)/insights-client ./
 
 .PHONY: build-linux
 build-linux:
-	make insights-client GOOS=linux
+	make build GOOS=linux
 
 .PHONY: lint
 lint:
+	 go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.38.0
 	 golangci-lint run --timeout=2m
 
 run:
@@ -53,3 +50,7 @@ clean::
 	go clean
 	rm -f cover*
 	rm -rf ./$(BINDIR)
+
+# Build the docker image
+docker-build: 
+	docker build -f Dockerfile . -t $(shell cat COMPONENT_NAME)
