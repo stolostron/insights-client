@@ -15,6 +15,7 @@ import (
 	"github.com/open-cluster-management/insights-client/pkg/config"
 	"github.com/open-cluster-management/insights-client/pkg/handlers"
 	"github.com/open-cluster-management/insights-client/pkg/retriever"
+    "github.com/open-cluster-management/insights-client/pkg/types"
 )
 
 func main() {
@@ -32,15 +33,15 @@ func main() {
 	}
 
     // Done channel for waiting
-    fetchClusterIDs := make(chan string)
+    fetchManagedClusters := make(chan types.ManagedClusterInfo)
     // fetchPolicyReports := make(chan types.PolicyInfo)
 
     ctx, _ := context.WithCancel(context.Background())
     monitor := retriever.NewClusterMonitor()
-	go monitor.UpdateClusterIDs(ctx, fetchClusterIDs)
+	go monitor.UpdateClusterIDs(ctx, fetchManagedClusters)
 
 	retriever.NewRetriever(config.Cfg.CCXServer, nil, 2*time.Second, "")
-	//go retriever.RetrieveCCXReport(fetch, reports)
+	//go retriever.RetrieveCCXReport(fetchManagedClusters, fetchPolicyReports)
 
 	router := mux.NewRouter()
 
