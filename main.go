@@ -1,7 +1,6 @@
 package main
 
 import (
-    "context"
 	"crypto/tls"
 	"flag"
 	"fmt"
@@ -15,6 +14,7 @@ import (
 	"github.com/open-cluster-management/insights-client/pkg/config"
 	"github.com/open-cluster-management/insights-client/pkg/handlers"
 	"github.com/open-cluster-management/insights-client/pkg/retriever"
+	"github.com/open-cluster-management/insights-client/pkg/monitor"
     "github.com/open-cluster-management/insights-client/pkg/types"
 )
 
@@ -36,9 +36,8 @@ func main() {
     fetchManagedClusters := make(chan types.ManagedClusterInfo)
     // fetchPolicyReports := make(chan types.PolicyInfo)
 
-    ctx, _ := context.WithCancel(context.Background())
-    monitor := retriever.NewClusterMonitor()
-	go monitor.UpdateClusterIDs(ctx, fetchManagedClusters)
+	monitor := monitor.NewClusterMonitor()
+	go monitor.WatchClusters(fetchManagedClusters)
 
 	retriever.NewRetriever(config.Cfg.CCXServer, nil, 2*time.Second, "")
 	//go retriever.RetrieveCCXReport(fetchManagedClusters, fetchPolicyReports)
