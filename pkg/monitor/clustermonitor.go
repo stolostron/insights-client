@@ -34,7 +34,7 @@ func NewClusterMonitor() *Monitor {
 }
 
 // WatchClusters - Watches ManagedCluster objects and updates clusterID list for Insights call.
-func (m *Monitor) WatchClusters(input chan types.ManagedClusterInfo) {
+func (m *Monitor) WatchClusters() {
 	glog.Info("Begin ClusterWatch routine")
 
 	dynamicClient := config.GetDynamicClient()
@@ -49,10 +49,13 @@ func (m *Monitor) WatchClusters(input chan types.ManagedClusterInfo) {
 	// Create handlers for events
 	handlers := cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			m.processCluster(obj, input)
+			m.processCluster(obj, "add")
 		},
 		UpdateFunc: func(prev interface{}, next interface{}) {
-			m.processCluster(next, input)
+			m.processCluster(next, "update")
+		},
+		DeleteFunc: func(obj interface{}) {
+			m.processCluster(obj, "delete")
 		},
 	}
 
@@ -98,9 +101,7 @@ func isClusterMissing(err error) bool {
 	return strings.Contains(err.Error(), "could not find the requested resource")
 }
 
-func (m *Monitor) processCluster(obj interface{}, input chan types.ManagedClusterInfo) {
-	// Lock so only one goroutine at a time can access add a cluster.
-	// Helps to eliminate duplicate entries.
+func (m *Monitor) processCluster(obj interface{}, handlerType string) {
 	mux.Lock()
 	defer mux.Unlock()
 	j, err := json.Marshal(obj.(*unstructured.Unstructured))
@@ -114,14 +115,25 @@ func (m *Monitor) processCluster(obj interface{}, input chan types.ManagedCluste
 	if err != nil {
 		glog.Warning("Failed to Unmarshal MangedCluster", err)
 	}
-	m.transformManagedCluster(&managedCluster, input)
+
+	switch handlerType {
+	case "add":
+		m.addCluster(&managedCluster)
+	case "update":
+		m.updateCluster(&managedCluster)
+	case "delete":
+		m.deleteCluster(&managedCluster)
+	default:
+		glog.Warning("Process cluster received unknown type")
+	}
 }
 
-// Transform ManagedCluster grabs the cluster name & clusterID for Insights call
-func (m *Monitor) transformManagedCluster(managedCluster *clusterv1.ManagedCluster, input chan types.ManagedClusterInfo) {
+func (m *Monitor) addCluster(managedCluster *clusterv1.ManagedCluster) {
+	glog.V(2).Info("Processing Cluster Addition.")
 	var version int64
 	var clusterVendor string
 	var clusterID string
+
 	for _, claimInfo := range managedCluster.Status.ClusterClaims {
 		if claimInfo.Name == "product.open-cluster-management.io" {
 			clusterVendor = claimInfo.Value
@@ -137,7 +149,40 @@ func (m *Monitor) transformManagedCluster(managedCluster *clusterv1.ManagedClust
 
 	// We only get Insights for OpenShift clusters versioned 4.x or greater.
 	if clusterVendor == "OpenShift" && version >= 4 {
-		input <- types.ManagedClusterInfo{ClusterID: clusterID, Namespace: managedCluster.GetName()}
+		glog.V(2).Infof("Adding %s to Insights cluster list", managedCluster.GetName())
 		m.ManagedClusterInfo = append(m.ManagedClusterInfo, types.ManagedClusterInfo{ClusterID: clusterID, Namespace: managedCluster.GetName()})
+	}
+}
+
+// Removes a ManagedCluster resource from ManagedClusterInfo list
+func (m *Monitor) updateCluster(managedCluster *clusterv1.ManagedCluster) {
+	glog.V(2).Info("Processing Cluster Update.")
+
+	var clusterID string 
+	clusterToUpdate := managedCluster.GetName()
+	for _, claimInfo := range managedCluster.Status.ClusterClaims {
+		if claimInfo.Name == "id.openshift.io" {
+			clusterID = claimInfo.Value
+		}
+	}
+	for clusterIdx, cluster := range m.ManagedClusterInfo {
+		if clusterToUpdate == cluster.Namespace && clusterID != cluster.ClusterID {
+			// If the cluster ID has changed update it - otherwise do nothing.
+			glog.V(2).Infof("Updating %s from Insights cluster list", clusterToUpdate)
+			m.ManagedClusterInfo[clusterIdx] = types.ManagedClusterInfo{ClusterID: clusterID, Namespace: managedCluster.GetName()}
+		}
+	}
+}
+
+// Removes a ManagedCluster resource from ManagedClusterInfo list
+func (m *Monitor) deleteCluster(managedCluster *clusterv1.ManagedCluster) {
+	glog.V(2).("Processing Cluster Delete.")
+
+	clusterToDelete := managedCluster.GetName()
+	for clusterIdx, cluster := range m.ManagedClusterInfo {
+		if clusterToDelete == cluster.Namespace {
+			glog.V(2).Infof("Removing %s from Insights cluster list", clusterToDelete)
+			m.ManagedClusterInfo = append(m.ManagedClusterInfo[:clusterIdx], m.ManagedClusterInfo[clusterIdx+1:]...)
+		}
 	}
 }
