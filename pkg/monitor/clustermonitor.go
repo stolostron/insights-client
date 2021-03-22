@@ -176,7 +176,7 @@ func (m *Monitor) updateCluster(managedCluster *clusterv1.ManagedCluster) {
 
 // Removes a ManagedCluster resource from ManagedClusterInfo list
 func (m *Monitor) deleteCluster(managedCluster *clusterv1.ManagedCluster) {
-	glog.V(2).("Processing Cluster Delete.")
+	glog.V(2).Info("Processing Cluster Delete.")
 
 	clusterToDelete := managedCluster.GetName()
 	for clusterIdx, cluster := range m.ManagedClusterInfo {
