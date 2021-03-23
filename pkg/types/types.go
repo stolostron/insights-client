@@ -9,7 +9,7 @@ type ResponseBody struct {
 type ReportData struct {
 	Created         string      `json:"created_at"`
 	Description     string      `json:"description"`
-	Details         string      `json:"details"`
+	Details         Details     `json:"details"`
 	Reason          string      `json:"reason"`
 	Resolution      string      `json:"resolution"`
 	RiskOfChange    int64       `json:"risk_of_change"`
@@ -29,7 +29,7 @@ type PolicyInfo struct {
 	Policy    Policy
 }
 type Policy struct {
-	Report PolicyReport `json:"report"`
+	Report []ReportData `json:"reports"`
 }
 
 type PolicyReport struct {
@@ -41,4 +41,9 @@ type PolicyReport struct {
 
 type PostBody struct {
 	Clusters []string `json:"clusters"`
+}
+
+type Details struct {
+	Error_key string `json:"error_key"`
+	Typestr   string `json:"type"`
 }
