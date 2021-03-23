@@ -14,6 +14,7 @@ import (
 	"github.com/open-cluster-management/insights-client/pkg/config"
 	"github.com/open-cluster-management/insights-client/pkg/handlers"
 	"github.com/open-cluster-management/insights-client/pkg/retriever"
+	"github.com/open-cluster-management/insights-client/pkg/monitor"
 )
 
 func main() {
@@ -30,8 +31,14 @@ func main() {
 		glog.Info("Built from git commit: ", commit)
 	}
 
+    // Done channel for waiting
+    // fetchPolicyReports := make(chan types.PolicyInfo)
+
+	monitor := monitor.NewClusterMonitor()
+	go monitor.WatchClusters()
+
 	retriever.NewRetriever(config.Cfg.CCXServer, nil, 2*time.Second, "")
-	//go retriever.RetrieveCCXReport(fetch, reports)
+	//go retriever.RetrieveCCXReport(fetchManagedClusters, fetchPolicyReports)
 
 	router := mux.NewRouter()
 
@@ -60,5 +67,4 @@ func main() {
 	glog.Info("insights-client listening on", config.Cfg.ServicePort)
 	log.Fatal(srv.ListenAndServeTLS("./sslcert/tls.crt", "./sslcert/tls.key"),
 		" Use ./setup.sh to generate certificates for local development.")
-
 }

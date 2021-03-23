@@ -3,6 +3,7 @@
 package config
 
 import (
+    "sync"
 	"github.com/golang/glog"
 
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,6 +14,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+    "k8s.io/client-go/dynamic"
 	"sigs.k8s.io/wg-policy-prototypes/policy-report/api/v1alpha1"
 )
 
@@ -21,6 +23,20 @@ var CRDVersion string = "v1alpha1"
 var SchemeGroupVersion = schema.GroupVersion{Group: CRDGroup, Version: CRDVersion}
 var restClient *rest.RESTClient
 var clientSet *kubernetes.Clientset
+var mutex sync.Mutex
+var dynamicClient dynamic.Interface
+
+func GetConfig() *rest.Config {
+	var clientConfig *rest.Config
+	if Cfg.KubeConfig != "" {
+		glog.V(2).Infof("Creating k8s client using path: %s", Cfg.KubeConfig)
+		clientConfig, _ = clientcmd.BuildConfigFromFlags("", Cfg.KubeConfig)
+	} else {
+		glog.V(2).Info("Creating k8s client using InClusterlientConfig()")
+		clientConfig, _ = rest.InClusterConfig()
+	}
+	return clientConfig
+}
 
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
@@ -53,17 +69,20 @@ func RESTClient(cfg *rest.Config) *rest.RESTClient {
 	return restClient
 }
 
-func GetConfig() *rest.Config {
-	var clientConfig *rest.Config
-	if Cfg.KubeConfig != "" {
-		glog.V(2).Infof("Creating k8s client using path: %s", Cfg.KubeConfig)
-		clientConfig, _ = clientcmd.BuildConfigFromFlags("", Cfg.KubeConfig)
-	} else {
-		glog.V(2).Info("Creating k8s client using InClusterlientConfig()")
-		clientConfig, _ = rest.InClusterConfig()
-	}
-	return clientConfig
+// Get the kubernetes dynamic client.
+func GetDynamicClient() dynamic.Interface {
+    mutex.Lock()
+    defer mutex.Unlock()
+    if dynamicClient != nil {
+        return dynamicClient
+    }
+    newDynamicClient, err := dynamic.NewForConfig(GetConfig())
+    if err != nil {
+        glog.Fatal("Cannot Construct Dynamic Client ", err)
+    }
+    dynamicClient = newDynamicClient
 
+    return dynamicClient
 }
 
 func GetKubeClient() *kubernetes.Clientset {
