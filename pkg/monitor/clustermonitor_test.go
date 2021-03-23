@@ -3,6 +3,7 @@
 package monitor
 
 import (
+	"errors"
 	"encoding/json"
 	"io/ioutil"
 	"testing"
@@ -60,4 +61,13 @@ func Test_deleteCluster(t *testing.T) {
 
 	assert.Equal(t, []types.ManagedClusterInfo{}, monitor.ManagedClusterInfo, "Test Delete ManagedCluster: local-cluster")
 
+}
+
+func Test_isClustermissing(t *testing.T) {
+	resultFalse := isClusterMissing(nil)
+	assert.Equal(t, false, resultFalse, "Test isClusterMissing - false")
+
+	err := errors.New("could not find the requested resource")
+	resultTrue := isClusterMissing(err)
+	assert.Equal(t, true, resultTrue, "Test isClusterMissing - true")
 }
