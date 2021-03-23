@@ -37,7 +37,7 @@ func TestChangeSupportConfig(t *testing.T) {
 
 	ret := NewRetriever(ts.URL, nil, 2*time.Second, "testToken")
 	req, _ := ret.GetInsightsRequest(context.TODO(), ts.URL, "34c3ecc5-624a-49a5-bab8-4fdc5e51a266")
-	if req.Header.Get("User-Agent") != "insights-operator/v1.0.0+alpha cluster/34c3ecc5-624a-49a5-bab8-4fdc5e51a266" {
+	if req.Header.Get("User-Agent") != "insights-operator/v1.0.0+b653953-b653953ed174001d5aca50b3515f1fa6f6b28728 cluster/34c3ecc5-624a-49a5-bab8-4fdc5e51a266" {
 		t.Errorf("Header User-Agent not formed correct    : %s", req.Header.Get("User-Agent"))
 	}
 	if !strings.HasPrefix(req.Header.Get("Authorization"), "Bearer testToken") {

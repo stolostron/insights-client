@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	e "errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -40,6 +41,7 @@ func NewRetriever(ccxurl string, client *http.Client, tokenValidationInterval ti
 	r := &Retriever{
 		TokenValidationInterval: tokenValidationInterval,
 		Client:                  client,
+		CCXUrl:                  ccxurl,
 	}
 	if token == "" {
 		if err := r.StartTokenRefresh(); err != nil {
@@ -96,6 +98,8 @@ func (r *Retriever) RetrieveCCXReport(input chan string, output chan types.Polic
 		// If the cluster id is empty do nothing
 		if clusterId == "" {
 			return
+		} else {
+			glog.Infof("RetrieveCCXReport for cluster %s", clusterId)
 		}
 		req, err := r.GetInsightsRequest(context.TODO(), r.CCXUrl, clusterId)
 		if err != nil {
@@ -131,7 +135,7 @@ func (r *Retriever) GetInsightsRequest(ctx context.Context, endpoint string, clu
 		glog.Warningf("Error creating HttpRequest for cluster %s, %v", clusterId, err)
 		return nil, err
 	}
-	userAgent := "insights-operator/v1.0.0+alpha cluster/" + clusterId
+	userAgent := "insights-operator/v1.0.0+b653953-b653953ed174001d5aca50b3515f1fa6f6b28728 cluster/" + clusterId
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", userAgent)
 	req.Header.Set("Authorization", "Bearer "+r.Token)
@@ -139,12 +143,16 @@ func (r *Retriever) GetInsightsRequest(ctx context.Context, endpoint string, clu
 }
 
 func (r *Retriever) CallInsights(req *http.Request, clusterId string) (types.ResponseBody, error) {
-	glog.Infof("Calling Insights for cluster %s :", clusterId)
+	glog.Infof("Calling Insights for cluster %s ", clusterId)
 	var responseBody types.ResponseBody
 	res, err := r.Client.Do(req)
 	if err != nil {
 		glog.Warningf("Error sending HttpRequest for cluster %s, %v", clusterId, err)
 		return types.ResponseBody{}, err
+	}
+	if res.StatusCode != 200 {
+		glog.Warningf("Response Code error for cluster %s, response code %d", clusterId, res.StatusCode)
+		return types.ResponseBody{}, e.New("No Success HTTP Response code ")
 	}
 	defer res.Body.Close()
 	data, _ := ioutil.ReadAll(res.Body)
@@ -158,7 +166,7 @@ func (r *Retriever) CallInsights(req *http.Request, clusterId string) (types.Res
 }
 
 func (r *Retriever) GetPolicyInfo(responseBody types.ResponseBody, clusterId string) (types.PolicyInfo, error) {
-	glog.Infof("Create Policy Info for cluster %s :", clusterId)
+	glog.Infof("Creating Policy Info for cluster %s ", clusterId)
 	var policy types.Policy
 	policyInfo := types.PolicyInfo{}
 
@@ -169,6 +177,7 @@ func (r *Retriever) GetPolicyInfo(responseBody types.ResponseBody, clusterId str
 			reportBytes, _ := json.Marshal(responseBody.Reports[cluster])
 			// unmarshal response data into the Policy struct
 			unmarshalError := json.Unmarshal(reportBytes, &policy)
+
 			if unmarshalError != nil {
 				glog.Infof("Error unmarshalling Policy %v for cluster %s ", unmarshalError, clusterId)
 				return policyInfo, unmarshalError
