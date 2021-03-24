@@ -21,13 +21,13 @@ import (
 )
 
 // Find returns a bool if the item exists in the given slice
-func Find(slice []types.ManagedClusterInfo, val types.ManagedClusterInfo) (bool) {
-    for _, item := range slice {
-        if item == val {
-            return true
+func Find(slice []types.ManagedClusterInfo, val types.ManagedClusterInfo) (int, bool) {
+    for i, item := range slice {
+        if item.Namespace == val.Namespace {
+            return i, true
         }
     }
-    return false
+    return -1, false
 }
 
 // GetClusterClaimInfo return the ManagedCluster vendor, version and ID
@@ -167,7 +167,7 @@ func (m *Monitor) addCluster(managedCluster *clusterv1.ManagedCluster) {
 	clusterVendor, version, clusterID := GetClusterClaimInfo(managedCluster)
 	// We only get Insights for OpenShift clusters versioned 4.x or greater.
 	if clusterVendor == "OpenShift" && version >= 4 {
-		glog.V(2).Infof("Adding %s to Insights cluster list", managedCluster.GetName())
+		glog.Infof("Adding %s to Insights cluster list", managedCluster.GetName())
 		m.ManagedClusterInfo = append(m.ManagedClusterInfo, types.ManagedClusterInfo{
 			ClusterID: clusterID,
 			Namespace: managedCluster.GetName(),
@@ -181,20 +181,18 @@ func (m *Monitor) updateCluster(managedCluster *clusterv1.ManagedCluster) {
 
 	clusterToUpdate := managedCluster.GetName()
 	clusterVendor, version, clusterID := GetClusterClaimInfo(managedCluster)
-	for clusterIdx, cluster := range m.ManagedClusterInfo {
-		if clusterToUpdate == cluster.Namespace && clusterID != cluster.ClusterID {
-			// If the cluster ID has changed update it - otherwise do nothing.
-			glog.V(2).Infof("Updating %s from Insights cluster list", clusterToUpdate)
-			m.ManagedClusterInfo[clusterIdx] = types.ManagedClusterInfo{
-				ClusterID: clusterID,
-				Namespace: managedCluster.GetName(),
-			}
-			return
+	clusterIdx, found := Find(m.ManagedClusterInfo, types.ManagedClusterInfo{Namespace: clusterToUpdate, ClusterID: clusterID})
+	if found && clusterID != m.ManagedClusterInfo[clusterIdx].ClusterID {
+		// If the cluster ID has changed update it - otherwise do nothing.
+		glog.Infof("Updating %s from Insights cluster list", clusterToUpdate)
+		m.ManagedClusterInfo[clusterIdx] = types.ManagedClusterInfo{
+			ClusterID: clusterID,
+			Namespace: managedCluster.GetName(),
 		}
+		return
 	}
 
 	// Case to add a ManagedCluster to cluster list after it has been upgraded to version >= 4.X
-	found := Find(m.ManagedClusterInfo, types.ManagedClusterInfo{Namespace: clusterToUpdate, ClusterID: clusterID})
 	if !found && clusterVendor == "OpenShift" && version >= 4 {
 		glog.Infof("Adding %s to Insights cluster list - Cluster was upgraded", managedCluster.GetName())
 		m.ManagedClusterInfo = append(m.ManagedClusterInfo, types.ManagedClusterInfo{
@@ -211,7 +209,7 @@ func (m *Monitor) deleteCluster(managedCluster *clusterv1.ManagedCluster) {
 	clusterToDelete := managedCluster.GetName()
 	for clusterIdx, cluster := range m.ManagedClusterInfo {
 		if clusterToDelete == cluster.Namespace {
-			glog.V(2).Infof("Removing %s from Insights cluster list", clusterToDelete)
+			glog.Infof("Removing %s from Insights cluster list", clusterToDelete)
 			m.ManagedClusterInfo = append(m.ManagedClusterInfo[:clusterIdx], m.ManagedClusterInfo[clusterIdx+1:]...)
 		}
 	}
