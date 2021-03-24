@@ -181,7 +181,10 @@ func (m *Monitor) updateCluster(managedCluster *clusterv1.ManagedCluster) {
 
 	clusterToUpdate := managedCluster.GetName()
 	clusterVendor, version, clusterID := GetClusterClaimInfo(managedCluster)
-	clusterIdx, found := Find(m.ManagedClusterInfo, types.ManagedClusterInfo{Namespace: clusterToUpdate, ClusterID: clusterID})
+	clusterIdx, found := Find(m.ManagedClusterInfo, types.ManagedClusterInfo{
+		Namespace: clusterToUpdate,
+		ClusterID: clusterID,
+	})
 	if found && clusterID != m.ManagedClusterInfo[clusterIdx].ClusterID {
 		// If the cluster ID has changed update it - otherwise do nothing.
 		glog.Infof("Updating %s from Insights cluster list", clusterToUpdate)
