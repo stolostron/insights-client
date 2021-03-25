@@ -13,8 +13,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/open-cluster-management/insights-client/pkg/config"
 	"github.com/open-cluster-management/insights-client/pkg/handlers"
-	"github.com/open-cluster-management/insights-client/pkg/retriever"
 	"github.com/open-cluster-management/insights-client/pkg/monitor"
+	"github.com/open-cluster-management/insights-client/pkg/retriever"
 )
 
 func main() {
@@ -31,13 +31,14 @@ func main() {
 		glog.Info("Built from git commit: ", commit)
 	}
 
-    // Done channel for waiting
-    // fetchPolicyReports := make(chan types.PolicyInfo)
+	// Done channel for waiting
+	// fetchPolicyReports := make(chan types.PolicyInfo)
 
 	monitor := monitor.NewClusterMonitor()
 	go monitor.WatchClusters()
 
-	retriever.NewRetriever(config.Cfg.CCXServer, nil, 2*time.Second, "")
+	ret := retriever.NewRetriever(config.Cfg.CCXServer, "https://cloud.redhat.com/api/insights-results-aggregator/v1/content", nil, 2*time.Second, "")
+	ret.RetrieveCCXContent("089242aa-cf78-4231-a9d3-a2847193530a")
 	//go retriever.RetrieveCCXReport(fetchManagedClusters, fetchPolicyReports)
 
 	router := mux.NewRouter()
