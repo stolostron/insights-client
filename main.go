@@ -13,8 +13,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/open-cluster-management/insights-client/pkg/config"
 	"github.com/open-cluster-management/insights-client/pkg/handlers"
-	"github.com/open-cluster-management/insights-client/pkg/retriever"
 	"github.com/open-cluster-management/insights-client/pkg/monitor"
+	"github.com/open-cluster-management/insights-client/pkg/retriever"
 )
 
 func main() {
@@ -31,13 +31,30 @@ func main() {
 		glog.Info("Built from git commit: ", commit)
 	}
 
-    // Done channel for waiting
-    // fetchPolicyReports := make(chan types.PolicyInfo)
+	// Done channel for waiting
+	// fetchPolicyReports := make(chan types.PolicyInfo)
 
 	monitor := monitor.NewClusterMonitor()
 	go monitor.WatchClusters()
 
-	retriever.NewRetriever(config.Cfg.CCXServer, nil, 2*time.Second, "")
+	ret := retriever.NewRetriever(config.Cfg.CCXServer+"/clusters/reports",
+		config.Cfg.CCXServer+"/content", nil, 2*time.Second, "")
+	//Wait for hub cluster id to make GET API call
+	hubId := "-1"
+	for hubId == "-1" {
+		hubId = monitor.GetLocalCluster()
+		glog.Info("Waiting for local-cluster Id.")
+		time.Sleep(2 * time.Second)
+	}
+
+	// Wait until we can create the contents map , which will be used to lookup report details
+	contents := ret.InitializeContents(hubId)
+	for contents < 0 {
+		glog.Info("Contents Map not ready. Retrying.")
+		time.Sleep(2 * time.Second)
+		contents = ret.InitializeContents(hubId)
+	}
+
 	//go retriever.RetrieveCCXReport(fetchManagedClusters, fetchPolicyReports)
 
 	router := mux.NewRouter()

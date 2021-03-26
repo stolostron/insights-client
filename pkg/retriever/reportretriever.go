@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/golang/glog"
@@ -22,6 +23,7 @@ import (
 
 type Retriever struct {
 	CCXUrl                  string
+	ContentUrl              string
 	Client                  *http.Client
 	Token                   string // token to connect to CRC
 	TokenValidationInterval time.Duration
@@ -34,7 +36,11 @@ type serializedAuth struct {
 	Auth string `json:"auth"`
 }
 
-func NewRetriever(ccxurl string, client *http.Client, tokenValidationInterval time.Duration, token string) *Retriever {
+var contentsMap map[string]map[string]interface{}
+var lock = sync.RWMutex{}
+
+func NewRetriever(ccxurl string, contentUrl string, client *http.Client,
+	tokenValidationInterval time.Duration, token string) *Retriever {
 	if client == nil {
 		client = &http.Client{}
 	}
@@ -42,16 +48,23 @@ func NewRetriever(ccxurl string, client *http.Client, tokenValidationInterval ti
 		TokenValidationInterval: tokenValidationInterval,
 		Client:                  client,
 		CCXUrl:                  ccxurl,
+		ContentUrl:              contentUrl,
 	}
 	if token == "" {
-		if err := r.StartTokenRefresh(); err != nil {
-			glog.Warningf("Unable to get CRC Token: %v", err)
-		}
+		r.setUpRetriever()
 	} else {
 		r.Token = token
 	}
-
 	return r
+}
+
+// Get CRC token , wait until we can get token
+func (r *Retriever) setUpRetriever() {
+	err := r.StartTokenRefresh()
+	for err != nil {
+		glog.Warningf("Unable to get CRC Token: %v", err)
+		time.Sleep(5 * time.Second)
+	}
 }
 
 func (r *Retriever) StartTokenRefresh() error {
@@ -186,4 +199,116 @@ func (r *Retriever) GetPolicyInfo(responseBody types.ResponseBody, clusterId str
 		}
 	}
 	return policyInfo, nil
+}
+
+// Creates GET request for contents
+func (r *Retriever) GetContentRequest(ctx context.Context, clusterId string) (*http.Request, error) {
+	glog.Infof("Creating Content Request for cluster %s using  URL %s :", clusterId, r.ContentUrl)
+	req, err := http.NewRequest("GET", r.ContentUrl, nil)
+	if err != nil {
+		glog.Warningf("Error creating HttpRequest with endpoint %s, %v", r.ContentUrl, err)
+		return nil, err
+	}
+	userAgent := "insights-operator/v1.0.0+b653953-b653953ed174001d5aca50b3515f1fa6f6b28728 cluster/" + clusterId
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", userAgent)
+	req.Header.Set("Authorization", "Bearer "+r.Token)
+	return req, nil
+}
+
+// Makes HTTP call to get contents
+func (r *Retriever) CallContents(req *http.Request) (types.ContentsResponse, error) {
+	glog.Infof("Making GET call for  Contents .")
+	var responseBody types.ContentsResponse
+	res, err := r.Client.Do(req)
+	if err != nil {
+		glog.Warningf("Error sending HttpRequest for contents %v", err)
+		return types.ContentsResponse{}, err
+	}
+	if res.StatusCode != 200 {
+		glog.Warningf("Unsucessful response during contents GET - response code %d", res.StatusCode)
+		return types.ContentsResponse{}, e.New("No Success HTTP Response code ")
+	}
+	defer res.Body.Close()
+	data, _ := ioutil.ReadAll(res.Body)
+	// unmarshal response data into the ResponseBody struct
+	unmarshalError := json.Unmarshal(data, &responseBody)
+	if unmarshalError != nil {
+		glog.Errorf("Error unmarshalling ResponseBody %v", unmarshalError)
+		return types.ContentsResponse{}, unmarshalError
+	}
+	return responseBody, err
+}
+
+// Function to make a GET HTTP call to get all the contents for reports
+func (r *Retriever) retrieveCCXContent(clusterId string) int {
+	req, err := r.GetContentRequest(context.TODO(), clusterId)
+	if err != nil {
+		glog.Warningf("Error creating HttpRequest with endpoint %s, %v", r.ContentUrl, err)
+		return -1
+	}
+	contents, err := r.CallContents(req)
+	if err != nil {
+		glog.Warningf("Error calling for contents %s, %v", clusterId, err)
+		return -1
+	}
+	r.createContents(contents)
+	return len(contentsMap)
+}
+
+func (r *Retriever) InitializeContents(hubId string) int {
+	return r.retrieveCCXContent(hubId)
+}
+
+// Populate json response from /contents call onto a Map to quick lookup
+func (r *Retriever) createContents(responseBody types.ContentsResponse) {
+	glog.Infof("Creating Contents from json ")
+	contentsMap = make(map[string]map[string]interface{})
+
+	for content := range responseBody.Content {
+		for errorName, errorVal := range responseBody.Content[content].Error_keys {
+			errorMap := make(map[string]interface{})
+			errorMap["summary"] = responseBody.Content[content].Summary
+			errorMap["reason"] = responseBody.Content[content].Reason
+			errorMap["resolution"] = responseBody.Content[content].Resolution
+			errorVals := errorVal.(map[string]interface{})
+			for key, val := range errorVals {
+				if key == "metadata" {
+					errorMap = r.getErrorKey(val, errorMap)
+				} else {
+					errorMap[key] = val
+				}
+			}
+			lock.Lock()
+			contentsMap[errorName] = errorMap
+			lock.Unlock()
+		}
+	}
+}
+
+// Helper function to populate metadata interface{}
+func (r *Retriever) getErrorKey(metadata interface{}, errorMap map[string]interface{}) map[string]interface{} {
+	metatype := metadata.(map[string]interface{})
+	for mkey, mval := range metatype {
+		errorMap[mkey] = mval
+	}
+	return errorMap
+}
+
+//  Given Error_Key and field name returns value
+func (r *Retriever) GetContents(errorKey string, key string) interface{} {
+	lock.RLock()
+	defer lock.RUnlock()
+	return contentsMap[errorKey][key]
+}
+
+//  Given Error_Key gives the fields is has
+func (r *Retriever) GetFields(errorKey string) []string {
+	lock.RLock()
+	defer lock.RUnlock()
+	var fields []string
+	for mkey := range contentsMap[errorKey] {
+		fields = append(fields, mkey)
+	}
+	return fields
 }
