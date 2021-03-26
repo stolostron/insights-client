@@ -46,6 +46,7 @@ func main() {
 		time.Sleep(2 * time.Second)
 	}
 
+	// Wait until we can create the contents map , which will be used to lookup report details
 	contents := ret.InitializeContents(hubId)
 	for contents < 0 {
 		glog.Info("Contents Map not ready. Retrying.")

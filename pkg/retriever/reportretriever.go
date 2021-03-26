@@ -200,6 +200,7 @@ func (r *Retriever) GetPolicyInfo(responseBody types.ResponseBody, clusterId str
 	return policyInfo, nil
 }
 
+// Creates GET request for contents
 func (r *Retriever) GetContentRequest(ctx context.Context, clusterId string) (*http.Request, error) {
 	glog.Infof("Creating Content Request for cluster %s using  URL %s :", clusterId, r.ContentUrl)
 	req, err := http.NewRequest("GET", r.ContentUrl, nil)
@@ -214,6 +215,7 @@ func (r *Retriever) GetContentRequest(ctx context.Context, clusterId string) (*h
 	return req, nil
 }
 
+// Makes HTTP call to get contents
 func (r *Retriever) CallContents(req *http.Request) (types.ContentsResponse, error) {
 	glog.Infof("Making GET call for  Contents .")
 	var responseBody types.ContentsResponse
@@ -237,6 +239,7 @@ func (r *Retriever) CallContents(req *http.Request) (types.ContentsResponse, err
 	return responseBody, err
 }
 
+// Function to make a GET HTTP call to get all the contents for reports
 func (r *Retriever) retrieveCCXContent(clusterId string) int {
 	req, err := r.GetContentRequest(context.TODO(), clusterId)
 	if err != nil {
@@ -248,16 +251,15 @@ func (r *Retriever) retrieveCCXContent(clusterId string) int {
 		glog.Warningf("Error calling for contents %s, %v", clusterId, err)
 		return -1
 	}
-
 	r.createContents(contents)
 	return len(contentsMap)
-
 }
 
 func (r *Retriever) InitializeContents(hubId string) int {
 	return r.retrieveCCXContent(hubId)
 }
 
+// Populate json response from /contents call onto a Map to quick lookup
 func (r *Retriever) createContents(responseBody types.ContentsResponse) {
 	glog.Infof("Creating Contents from json ")
 	contentsMap = make(map[string]map[string]interface{})
