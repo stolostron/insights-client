@@ -74,7 +74,7 @@ func TestCallContents(t *testing.T) {
 	if len(response.Content) != 42 {
 		t.Errorf("Unexpected Report length %d", len(response.Content))
 	}
-	ret.RetrieveCCXContent("34c3ecc5-624a-49a5-bab8-4fdc5e51a266")
+	ret.InitializeContents("34c3ecc5-624a-49a5-bab8-4fdc5e51a266")
 
 	if len(ret.GetFields("TUTORIAL_ERROR")) != 12 {
 		t.Error("RetrieveCCXContent  did not create all fields, expected 11 actual  ", len(ret.GetFields("TUTORIAL_ERROR")))

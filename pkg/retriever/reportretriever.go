@@ -50,14 +50,20 @@ func NewRetriever(ccxurl string, contentUrl string, client *http.Client, tokenVa
 		ContentUrl:              contentUrl,
 	}
 	if token == "" {
-		if err := r.StartTokenRefresh(); err != nil {
-			glog.Warningf("Unable to get CRC Token: %v", err)
-		}
+		r.setUpRetriever()
 	} else {
 		r.Token = token
 	}
-
 	return r
+}
+
+// Get CRC token , wait until we can get token
+func (r *Retriever) setUpRetriever() {
+	err := r.StartTokenRefresh()
+	for err != nil {
+		glog.Warningf("Unable to get CRC Token: %v", err)
+		time.Sleep(5 * time.Second)
+	}
 }
 
 func (r *Retriever) StartTokenRefresh() error {
@@ -209,7 +215,7 @@ func (r *Retriever) GetContentRequest(ctx context.Context, clusterId string) (*h
 }
 
 func (r *Retriever) CallContents(req *http.Request) (types.ContentsResponse, error) {
-	glog.Infof("Making GET call for  Contents ")
+	glog.Infof("Making GET call for  Contents .")
 	var responseBody types.ContentsResponse
 	res, err := r.Client.Do(req)
 	if err != nil {
@@ -228,34 +234,34 @@ func (r *Retriever) CallContents(req *http.Request) (types.ContentsResponse, err
 		glog.Errorf("Error unmarshalling ResponseBody %v", unmarshalError)
 		return types.ContentsResponse{}, unmarshalError
 	}
-
 	return responseBody, err
 }
 
-func (r *Retriever) RetrieveCCXContent(clusterId string) {
+func (r *Retriever) retrieveCCXContent(clusterId string) int {
 	req, err := r.GetContentRequest(context.TODO(), clusterId)
 	if err != nil {
 		glog.Warningf("Error creating HttpRequest with endpoint %s, %v", r.ContentUrl, err)
+		return -1
 	}
 	contents, err := r.CallContents(req)
 	if err != nil {
-		glog.Warningf("Error sending HttpRequest for contents %s, %v", clusterId, err)
+		glog.Warningf("Error calling for contents %s, %v", clusterId, err)
+		return -1
 	}
 
-	err = r.CreateContents(contents)
-	if err != nil {
-		glog.Warningf("Error creating contents %v", err)
-	}
-	r.print()
+	r.createContents(contents)
+	return len(contentsMap)
+
 }
 
-func (r *Retriever) CreateContents(responseBody types.ContentsResponse) error {
+func (r *Retriever) InitializeContents(hubId string) int {
+	return r.retrieveCCXContent(hubId)
+}
+
+func (r *Retriever) createContents(responseBody types.ContentsResponse) {
 	glog.Infof("Creating Contents from json ")
 	contentsMap = make(map[string]map[string]interface{})
 
-	//policyInfo := types.PolicyInfo{}
-
-	// loop through the contents in the response and create a cache to lookup
 	for content := range responseBody.Content {
 		for error_name, error_val := range responseBody.Content[content].Error_keys {
 			errorMap := make(map[string]interface{})
@@ -264,49 +270,36 @@ func (r *Retriever) CreateContents(responseBody types.ContentsResponse) error {
 			errorMap["resolution"] = responseBody.Content[content].Resolution
 			error_vals := error_val.(map[string]interface{})
 			for key, val := range error_vals {
-				glog.Infof("X %s", error_name)
-
 				if key == "metadata" {
 					errorMap = r.getErrorKey(val, errorMap)
 				} else {
 					errorMap[key] = val
-					glog.Infof("%s -> %v", key, val)
 				}
-
 			}
 			lock.Lock()
 			contentsMap[error_name] = errorMap
 			lock.Unlock()
 		}
 	}
-	return nil
 }
 
-func (r *Retriever) getErrorKey(matadata interface{}, errorMap map[string]interface{}) map[string]interface{} {
-	matatype := matadata.(map[string]interface{})
-	for mkey, mval := range matatype {
+// Helper function to populate metadata interface{}
+func (r *Retriever) getErrorKey(metadata interface{}, errorMap map[string]interface{}) map[string]interface{} {
+	metatype := metadata.(map[string]interface{})
+	for mkey, mval := range metatype {
 		errorMap[mkey] = mval
-		glog.Infof("%s => %v", mkey, mval)
 	}
 	return errorMap
 }
 
-func (r *Retriever) print() {
-	for mkey, mval := range contentsMap {
-
-		glog.Infof("**** %s ", mkey)
-		for nkey := range mval {
-			glog.Infof("%%%% %s ", nkey)
-			glog.Infof("%%%% %s ", mval["summary"])
-		}
-	}
-}
+//  Given Error_Key and field name returns value
 func (r *Retriever) GetContents(errorKey string, key string) interface{} {
 	lock.RLock()
 	defer lock.RUnlock()
 	return contentsMap[errorKey][key]
 }
 
+//  Given Error_Key gives the fields is has
 func (r *Retriever) GetFields(errorKey string) []string {
 	lock.RLock()
 	defer lock.RUnlock()

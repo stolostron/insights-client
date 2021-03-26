@@ -37,8 +37,22 @@ func main() {
 	monitor := monitor.NewClusterMonitor()
 	go monitor.WatchClusters()
 
-	ret := retriever.NewRetriever(config.Cfg.CCXServer, "https://cloud.redhat.com/api/insights-results-aggregator/v1/content", nil, 2*time.Second, "")
-	ret.RetrieveCCXContent("089242aa-cf78-4231-a9d3-a2847193530a")
+	ret := retriever.NewRetriever(config.Cfg.CCXServer+"/clusters/reports", config.Cfg.CCXServer+"/content", nil, 2*time.Second, "")
+	//Wait for hub cluster id to make GET API call
+	hubId := "-1"
+	for hubId == "-1" {
+		hubId = monitor.GetLocalCluster()
+		glog.Info("Waiting for local-cluster Id.")
+		time.Sleep(2 * time.Second)
+	}
+
+	contents := ret.InitializeContents(hubId)
+	for contents < 0 {
+		glog.Info("Contents Map not ready. Retrying.")
+		time.Sleep(2 * time.Second)
+		contents = ret.InitializeContents(hubId)
+	}
+
 	//go retriever.RetrieveCCXReport(fetchManagedClusters, fetchPolicyReports)
 
 	router := mux.NewRouter()

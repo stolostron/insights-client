@@ -22,12 +22,12 @@ import (
 
 // Find returns a bool if the item exists in the given slice
 func Find(slice []types.ManagedClusterInfo, val types.ManagedClusterInfo) (int, bool) {
-    for i, item := range slice {
-        if item.Namespace == val.Namespace {
-            return i, true
-        }
-    }
-    return -1, false
+	for i, item := range slice {
+		if item.Namespace == val.Namespace {
+			return i, true
+		}
+	}
+	return -1, false
 }
 
 // GetClusterClaimInfo return the ManagedCluster vendor, version and ID
@@ -48,22 +48,22 @@ func GetClusterClaimInfo(managedCluster *clusterv1.ManagedCluster) (string, int6
 			clusterID = claimInfo.Value
 		}
 	}
-	return clusterVendor, version, clusterID 
+	return clusterVendor, version, clusterID
 }
 
 // Monitor struct
 type Monitor struct {
-    ManagedClusterInfo  []types.ManagedClusterInfo
-    clusterPollInterval time.Duration // How often we want to update managed cluster list
+	ManagedClusterInfo  []types.ManagedClusterInfo
+	clusterPollInterval time.Duration // How often we want to update managed cluster list
 }
 
 // NewClusterMonitor ...
 func NewClusterMonitor() *Monitor {
-    m := &Monitor{
-        ManagedClusterInfo:   []types.ManagedClusterInfo{},
-        clusterPollInterval:  1 * time.Minute,
-    }
-    return m
+	m := &Monitor{
+		ManagedClusterInfo:  []types.ManagedClusterInfo{},
+		clusterPollInterval: 1 * time.Minute,
+	}
+	return m
 }
 
 // WatchClusters - Watches ManagedCluster objects and updates clusterID list for Insights call.
@@ -216,4 +216,15 @@ func (m *Monitor) deleteCluster(managedCluster *clusterv1.ManagedCluster) {
 			m.ManagedClusterInfo = append(m.ManagedClusterInfo[:clusterIdx], m.ManagedClusterInfo[clusterIdx+1:]...)
 		}
 	}
+}
+
+// Get Local cluster ID
+func (m *Monitor) GetLocalCluster() string {
+	glog.V(2).Info("Get Local Cluster ID.")
+	for _, cluster := range m.ManagedClusterInfo {
+		if "local-cluster" == cluster.Namespace {
+			return cluster.ClusterID
+		}
+	}
+	return "-1"
 }
