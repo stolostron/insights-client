@@ -37,7 +37,8 @@ func main() {
 	monitor := monitor.NewClusterMonitor()
 	go monitor.WatchClusters()
 
-	ret := retriever.NewRetriever(config.Cfg.CCXServer+"/clusters/reports", config.Cfg.CCXServer+"/content", nil, 2*time.Second, "")
+	ret := retriever.NewRetriever(config.Cfg.CCXServer+"/clusters/reports",
+		config.Cfg.CCXServer+"/content", nil, 2*time.Second, "")
 	//Wait for hub cluster id to make GET API call
 	hubId := "-1"
 	for hubId == "-1" {

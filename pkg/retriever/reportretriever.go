@@ -39,7 +39,8 @@ type serializedAuth struct {
 var contentsMap map[string]map[string]interface{}
 var lock = sync.RWMutex{}
 
-func NewRetriever(ccxurl string, contentUrl string, client *http.Client, tokenValidationInterval time.Duration, token string) *Retriever {
+func NewRetriever(ccxurl string, contentUrl string, client *http.Client,
+	tokenValidationInterval time.Duration, token string) *Retriever {
 	if client == nil {
 		client = &http.Client{}
 	}
@@ -265,13 +266,13 @@ func (r *Retriever) createContents(responseBody types.ContentsResponse) {
 	contentsMap = make(map[string]map[string]interface{})
 
 	for content := range responseBody.Content {
-		for error_name, error_val := range responseBody.Content[content].Error_keys {
+		for errorName, errorVal := range responseBody.Content[content].Error_keys {
 			errorMap := make(map[string]interface{})
 			errorMap["summary"] = responseBody.Content[content].Summary
 			errorMap["reason"] = responseBody.Content[content].Reason
 			errorMap["resolution"] = responseBody.Content[content].Resolution
-			error_vals := error_val.(map[string]interface{})
-			for key, val := range error_vals {
+			errorVals := errorVal.(map[string]interface{})
+			for key, val := range errorVals {
 				if key == "metadata" {
 					errorMap = r.getErrorKey(val, errorMap)
 				} else {
@@ -279,7 +280,7 @@ func (r *Retriever) createContents(responseBody types.ContentsResponse) {
 				}
 			}
 			lock.Lock()
-			contentsMap[error_name] = errorMap
+			contentsMap[errorName] = errorMap
 			lock.Unlock()
 		}
 	}
