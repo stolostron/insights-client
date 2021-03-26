@@ -1,5 +1,6 @@
 // Copyright (c) 2021 Red Hat, Inc.
 // Copyright Contributors to the Open Cluster Management project
+
 package retriever
 
 import (
@@ -21,6 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// Retriever struct
 type Retriever struct {
 	CCXUrl                  string
 	ContentUrl              string
@@ -39,6 +41,7 @@ type serializedAuth struct {
 var contentsMap map[string]map[string]interface{}
 var lock = sync.RWMutex{}
 
+// NewRetriever ...
 func NewRetriever(ccxurl string, contentUrl string, client *http.Client,
 	tokenValidationInterval time.Duration, token string) *Retriever {
 	if client == nil {
@@ -67,6 +70,7 @@ func (r *Retriever) setUpRetriever() {
 	}
 }
 
+// StartTokenRefresh sets the CRC token for use in Insights queries
 func (r *Retriever) StartTokenRefresh() error {
 	glog.Infof("Refreshing CRC credentials  ")
 	secret, err := config.GetKubeClient().CoreV1().Secrets("openshift-config").
@@ -104,30 +108,30 @@ func (r *Retriever) StartTokenRefresh() error {
 	return nil
 }
 
-func (r *Retriever) RetrieveCCXReport(input chan string, output chan types.PolicyInfo) {
+// RetrieveCCXReport ...
+func (r *Retriever) RetrieveCCXReport(input chan types.ManagedClusterInfo, output chan types.PolicyInfo) {
 	for {
-
-		clusterId := <-input
+		cluster := <-input
 		// If the cluster id is empty do nothing
-		if clusterId == "" {
+		if cluster.Namespace == "" || cluster.ClusterID == "" {
 			return
-		} else {
-			glog.Infof("RetrieveCCXReport for cluster %s", clusterId)
 		}
-		req, err := r.GetInsightsRequest(context.TODO(), r.CCXUrl, clusterId)
+
+		glog.Infof("RetrieveCCXReport for cluster %s", cluster.Namespace)
+		req, err := r.GetInsightsRequest(context.TODO(), r.CCXUrl, cluster)
 		if err != nil {
-			glog.Warningf("Error creating HttpRequest for cluster %s, %v", clusterId, err)
+			glog.Warningf("Error creating HttpRequest for cluster %s, %v", cluster.Namespace, err)
 			continue
 		}
-		response, err := r.CallInsights(req, clusterId)
+		response, err := r.CallInsights(req, cluster)
 		if err != nil {
-			glog.Warningf("Error sending HttpRequest for cluster %s, %v", clusterId, err)
+			glog.Warningf("Error sending HttpRequest for cluster %s, %v", cluster.Namespace, err)
 			continue
 		}
 
-		policyInfo, err := r.GetPolicyInfo(response, clusterId)
+		policyInfo, err := r.GetPolicyInfo(response, cluster)
 		if err != nil {
-			glog.Warningf("Error creating PolicyInfo for cluster %s, %v", clusterId, err)
+			glog.Warningf("Error creating PolicyInfo for cluster %s, %v", cluster.Namespace, err)
 			continue
 		}
 
@@ -135,36 +139,38 @@ func (r *Retriever) RetrieveCCXReport(input chan string, output chan types.Polic
 	}
 }
 
-func (r *Retriever) GetInsightsRequest(ctx context.Context, endpoint string, clusterId string) (*http.Request, error) {
-	glog.Infof("Creating Request for cluster %s using Insights URL %s :", clusterId, r.CCXUrl)
-	mockClusters := types.PostBody{
+// GetInsightsRequest ...
+func (r *Retriever) GetInsightsRequest(ctx context.Context, endpoint string, cluster types.ManagedClusterInfo) (*http.Request, error) {
+	glog.Infof("Creating Request for cluster %s using Insights URL %s", cluster.Namespace, r.CCXUrl)
+	reqCluster := types.PostBody{
 		Clusters: []string{
-			clusterId,
+			cluster.ClusterID,
 		},
 	}
-	reqBody, _ := json.Marshal(mockClusters)
+	reqBody, _ := json.Marshal(reqCluster)
 	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(reqBody))
 	if err != nil {
-		glog.Warningf("Error creating HttpRequest for cluster %s, %v", clusterId, err)
+		glog.Warningf("Error creating HttpRequest for cluster %s, %v", cluster.Namespace, err)
 		return nil, err
 	}
-	userAgent := "insights-operator/v1.0.0+b653953-b653953ed174001d5aca50b3515f1fa6f6b28728 cluster/" + clusterId
+	userAgent := "insights-operator/v1.0.0+b653953-b653953ed174001d5aca50b3515f1fa6f6b28728 cluster/" + cluster.ClusterID
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", userAgent)
 	req.Header.Set("Authorization", "Bearer "+r.Token)
 	return req, nil
 }
 
-func (r *Retriever) CallInsights(req *http.Request, clusterId string) (types.ResponseBody, error) {
-	glog.Infof("Calling Insights for cluster %s ", clusterId)
+// CallInsights ...
+func (r *Retriever) CallInsights(req *http.Request, cluster types.ManagedClusterInfo) (types.ResponseBody, error) {
+	glog.Infof("Calling Insights for cluster %s ", cluster.Namespace)
 	var responseBody types.ResponseBody
 	res, err := r.Client.Do(req)
 	if err != nil {
-		glog.Warningf("Error sending HttpRequest for cluster %s, %v", clusterId, err)
+		glog.Warningf("Error sending HttpRequest for cluster %s, %v", cluster.Namespace, err)
 		return types.ResponseBody{}, err
 	}
 	if res.StatusCode != 200 {
-		glog.Warningf("Response Code error for cluster %s, response code %d", clusterId, res.StatusCode)
+		glog.Warningf("Response Code error for cluster %s, response code %d", cluster.Namespace, res.StatusCode)
 		return types.ResponseBody{}, e.New("No Success HTTP Response code ")
 	}
 	defer res.Body.Close()
@@ -178,24 +184,25 @@ func (r *Retriever) CallInsights(req *http.Request, clusterId string) (types.Res
 	return responseBody, err
 }
 
-func (r *Retriever) GetPolicyInfo(responseBody types.ResponseBody, clusterId string) (types.PolicyInfo, error) {
-	glog.Infof("Creating Policy Info for cluster %s ", clusterId)
+// GetPolicyInfo ...
+func (r *Retriever) GetPolicyInfo(responseBody types.ResponseBody, cluster types.ManagedClusterInfo) (types.PolicyInfo, error) {
+	glog.Infof("Creating Policy Info for cluster %s ", cluster.Namespace)
 	var policy types.Policy
 	policyInfo := types.PolicyInfo{}
 
 	// loop through the clusters in the response and create the PolicyReport node for each violation
-	for cluster := range responseBody.Reports {
-		if cluster == clusterId {
+	for clusterReport := range responseBody.Reports {
+		if clusterReport == cluster.ClusterID {
 			// convert report data into []byte
-			reportBytes, _ := json.Marshal(responseBody.Reports[cluster])
+			reportBytes, _ := json.Marshal(responseBody.Reports[clusterReport])
 			// unmarshal response data into the Policy struct
 			unmarshalError := json.Unmarshal(reportBytes, &policy)
 
 			if unmarshalError != nil {
-				glog.Infof("Error unmarshalling Policy %v for cluster %s ", unmarshalError, clusterId)
+				glog.Infof("Error unmarshalling Policy %v for cluster %s ", unmarshalError, cluster.Namespace)
 				return policyInfo, unmarshalError
 			}
-			policyInfo = types.PolicyInfo{Policy: policy, ClusterId: cluster}
+			policyInfo = types.PolicyInfo{Policy: policy, ClusterId: clusterReport}
 		}
 	}
 	return policyInfo, nil

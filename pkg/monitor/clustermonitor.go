@@ -3,6 +3,7 @@
 package monitor
 
 import (
+	"context"
 	"encoding/json"
 	"strconv"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"github.com/open-cluster-management/insights-client/pkg/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/tools/cache"
 
@@ -218,7 +220,17 @@ func (m *Monitor) deleteCluster(managedCluster *clusterv1.ManagedCluster) {
 	}
 }
 
-// Get Local cluster ID
+// FetchClusters forwards the managed clusters to RetrieveCCXReports function
+func (m *Monitor) FetchClusters(ctx context.Context, input chan types.ManagedClusterInfo) {
+	wait.Until(func() {
+		for _, cluster := range m.ManagedClusterInfo {
+			glog.Infof("Starting to get  cluster report for  %s", cluster)
+			input <- cluster
+		}
+	}, m.clusterPollInterval, ctx.Done())
+}
+
+// GetLocalCluster Get Local cluster ID
 func (m *Monitor) GetLocalCluster() string {
 	glog.V(2).Info("Get Local Cluster ID.")
 	for _, cluster := range m.ManagedClusterInfo {
