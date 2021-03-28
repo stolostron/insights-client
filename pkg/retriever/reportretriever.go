@@ -153,6 +153,9 @@ func (r *Retriever) GetInsightsRequest(ctx context.Context, endpoint string, clu
 		glog.Warningf("Error creating HttpRequest for cluster %s, %v", cluster.Namespace, err)
 		return nil, err
 	}
+	// userAgent for value will be updated to insights-client once the
+	// the task https://github.com/RedHatInsights/insights-results-smart-proxy/issues/450
+	// is completed
 	userAgent := "insights-operator/v1.0.0+b653953-b653953ed174001d5aca50b3515f1fa6f6b28728 cluster/" + cluster.ClusterID
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", userAgent)
@@ -216,6 +219,9 @@ func (r *Retriever) GetContentRequest(ctx context.Context, clusterId string) (*h
 		glog.Warningf("Error creating HttpRequest with endpoint %s, %v", r.ContentUrl, err)
 		return nil, err
 	}
+	// userAgent for value will be updated to insights-client once the
+	// the task https://github.com/RedHatInsights/insights-results-smart-proxy/issues/450
+	// is completed
 	userAgent := "insights-operator/v1.0.0+b653953-b653953ed174001d5aca50b3515f1fa6f6b28728 cluster/" + clusterId
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", userAgent)

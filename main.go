@@ -55,10 +55,12 @@ func main() {
 
 	// Wait until we can create the contents map , which will be used to lookup report details
 	contents := ret.InitializeContents(hubID)
+	retryCount := 1
 	for contents < 0 {
 		glog.Info("Contents Map not ready. Retrying.")
-		time.Sleep(2 * time.Second)
+		time.Sleep(time.Duration(min(300, retryCount*2)) * time.Second)
 		contents = ret.InitializeContents(hubID)
+		retryCount++
 	}
 
 	// Fetch the reports for each cluster & create the PolicyReport resources for each violation.
@@ -91,4 +93,12 @@ func main() {
 	glog.Info("insights-client listening on", config.Cfg.ServicePort)
 	log.Fatal(srv.ListenAndServeTLS("./sslcert/tls.crt", "./sslcert/tls.key"),
 		" Use ./setup.sh to generate certificates for local development.")
+}
+
+// Returns the smaller of two ints
+func min(a, b int) int {
+	if a > b {
+		return b
+	}
+	return a
 }
