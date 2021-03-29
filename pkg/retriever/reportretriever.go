@@ -140,8 +140,17 @@ func (r *Retriever) RetrieveCCXReport(input chan types.ManagedClusterInfo, outpu
 }
 
 // GetInsightsRequest ...
-func (r *Retriever) GetInsightsRequest(ctx context.Context, endpoint string, cluster types.ManagedClusterInfo) (*http.Request, error) {
-	glog.Infof("Creating Request for cluster %s (%s) using Insights URL %s", cluster.Namespace, cluster.ClusterID, r.CCXUrl)
+func (r *Retriever) GetInsightsRequest(
+	ctx context.Context,
+	endpoint string,
+	cluster types.ManagedClusterInfo,
+) (*http.Request, error) {
+	glog.Infof(
+		"Creating Request for cluster %s (%s) using Insights URL %s",
+		cluster.Namespace,
+		cluster.ClusterID,
+		r.CCXUrl,
+	)
 	reqCluster := types.PostBody{
 		Clusters: []string{
 			cluster.ClusterID,
@@ -173,7 +182,12 @@ func (r *Retriever) CallInsights(req *http.Request, cluster types.ManagedCluster
 		return types.ResponseBody{}, err
 	}
 	if res.StatusCode != 200 {
-		glog.Warningf("Response Code error for cluster %s (%s), response code %d", cluster.Namespace, cluster.ClusterID, res.StatusCode)
+		glog.Warningf(
+			"Response Code error for cluster %s (%s), response code %d",
+			cluster.Namespace,
+			cluster.ClusterID,
+			res.StatusCode,
+		)
 		return types.ResponseBody{}, e.New("No Success HTTP Response code ")
 	}
 	defer res.Body.Close()
@@ -188,7 +202,10 @@ func (r *Retriever) CallInsights(req *http.Request, cluster types.ManagedCluster
 }
 
 // GetPolicyInfo ...
-func (r *Retriever) GetPolicyInfo(responseBody types.ResponseBody, cluster types.ManagedClusterInfo) (types.PolicyInfo, error) {
+func (r *Retriever) GetPolicyInfo(
+	responseBody types.ResponseBody,
+	cluster types.ManagedClusterInfo,
+) (types.PolicyInfo, error) {
 	glog.Infof("Creating Policy Info for cluster %s (%s)", cluster.Namespace, cluster.ClusterID)
 	var policy types.Policy
 	policyInfo := types.PolicyInfo{}
@@ -202,7 +219,12 @@ func (r *Retriever) GetPolicyInfo(responseBody types.ResponseBody, cluster types
 			unmarshalError := json.Unmarshal(reportBytes, &policy)
 
 			if unmarshalError != nil {
-				glog.Infof("Error unmarshalling Policy %v for cluster %s (%s)", unmarshalError, cluster.Namespace, cluster.ClusterID)
+				glog.Infof(
+					"Error unmarshalling Policy %v for cluster %s (%s)",
+					unmarshalError,
+					cluster.Namespace,
+					cluster.ClusterID,
+				)
 				return policyInfo, unmarshalError
 			}
 			policyInfo = types.PolicyInfo{Policy: policy, ClusterId: clusterReport}
