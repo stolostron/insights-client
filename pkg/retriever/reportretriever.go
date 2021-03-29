@@ -120,18 +120,18 @@ func (r *Retriever) RetrieveCCXReport(input chan types.ManagedClusterInfo, outpu
 		glog.Infof("RetrieveCCXReport for cluster %s", cluster.Namespace)
 		req, err := r.GetInsightsRequest(context.TODO(), r.CCXUrl, cluster)
 		if err != nil {
-			glog.Warningf("Error creating HttpRequest for cluster %s, %v", cluster.Namespace, err)
+			glog.Warningf("Error creating HttpRequest for cluster %s (%s), %v", cluster.Namespace, cluster.ClusterID, err)
 			continue
 		}
 		response, err := r.CallInsights(req, cluster)
 		if err != nil {
-			glog.Warningf("Error sending HttpRequest for cluster %s, %v", cluster.Namespace, err)
+			glog.Warningf("Error sending HttpRequest for cluster %s (%s), %v", cluster.Namespace, cluster.ClusterID, err)
 			continue
 		}
 
 		policyInfo, err := r.GetPolicyInfo(response, cluster)
 		if err != nil {
-			glog.Warningf("Error creating PolicyInfo for cluster %s, %v", cluster.Namespace, err)
+			glog.Warningf("Error creating PolicyInfo for cluster %s (%s), %v", cluster.Namespace, cluster.ClusterID, err)
 			continue
 		}
 
@@ -141,7 +141,7 @@ func (r *Retriever) RetrieveCCXReport(input chan types.ManagedClusterInfo, outpu
 
 // GetInsightsRequest ...
 func (r *Retriever) GetInsightsRequest(ctx context.Context, endpoint string, cluster types.ManagedClusterInfo) (*http.Request, error) {
-	glog.Infof("Creating Request for cluster %s using Insights URL %s", cluster.Namespace, r.CCXUrl)
+	glog.Infof("Creating Request for cluster %s (%s) using Insights URL %s", cluster.Namespace, cluster.ClusterID, r.CCXUrl)
 	reqCluster := types.PostBody{
 		Clusters: []string{
 			cluster.ClusterID,
@@ -150,7 +150,7 @@ func (r *Retriever) GetInsightsRequest(ctx context.Context, endpoint string, clu
 	reqBody, _ := json.Marshal(reqCluster)
 	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(reqBody))
 	if err != nil {
-		glog.Warningf("Error creating HttpRequest for cluster %s, %v", cluster.Namespace, err)
+		glog.Warningf("Error creating HttpRequest for cluster %s (%s), %v", cluster.Namespace, cluster.ClusterID, err)
 		return nil, err
 	}
 	// userAgent for value will be updated to insights-client once the
@@ -165,15 +165,15 @@ func (r *Retriever) GetInsightsRequest(ctx context.Context, endpoint string, clu
 
 // CallInsights ...
 func (r *Retriever) CallInsights(req *http.Request, cluster types.ManagedClusterInfo) (types.ResponseBody, error) {
-	glog.Infof("Calling Insights for cluster %s ", cluster.Namespace)
+	glog.Infof("Calling Insights for cluster %s (%s)", cluster.Namespace, cluster.ClusterID)
 	var responseBody types.ResponseBody
 	res, err := r.Client.Do(req)
 	if err != nil {
-		glog.Warningf("Error sending HttpRequest for cluster %s, %v", cluster.Namespace, err)
+		glog.Warningf("Error sending HttpRequest for cluster %s (%s), %v", cluster.Namespace, cluster.ClusterID, err)
 		return types.ResponseBody{}, err
 	}
 	if res.StatusCode != 200 {
-		glog.Warningf("Response Code error for cluster %s, response code %d", cluster.Namespace, res.StatusCode)
+		glog.Warningf("Response Code error for cluster %s (%s), response code %d", cluster.Namespace, cluster.ClusterID, res.StatusCode)
 		return types.ResponseBody{}, e.New("No Success HTTP Response code ")
 	}
 	defer res.Body.Close()
@@ -189,7 +189,7 @@ func (r *Retriever) CallInsights(req *http.Request, cluster types.ManagedCluster
 
 // GetPolicyInfo ...
 func (r *Retriever) GetPolicyInfo(responseBody types.ResponseBody, cluster types.ManagedClusterInfo) (types.PolicyInfo, error) {
-	glog.Infof("Creating Policy Info for cluster %s ", cluster.Namespace)
+	glog.Infof("Creating Policy Info for cluster %s (%s)", cluster.Namespace, cluster.ClusterID)
 	var policy types.Policy
 	policyInfo := types.PolicyInfo{}
 
@@ -202,7 +202,7 @@ func (r *Retriever) GetPolicyInfo(responseBody types.ResponseBody, cluster types
 			unmarshalError := json.Unmarshal(reportBytes, &policy)
 
 			if unmarshalError != nil {
-				glog.Infof("Error unmarshalling Policy %v for cluster %s ", unmarshalError, cluster.Namespace)
+				glog.Infof("Error unmarshalling Policy %v for cluster %s (%s)", unmarshalError, cluster.Namespace, cluster.ClusterID)
 				return policyInfo, unmarshalError
 			}
 			policyInfo = types.PolicyInfo{Policy: policy, ClusterId: clusterReport}
