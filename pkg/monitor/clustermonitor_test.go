@@ -3,6 +3,7 @@
 package monitor
 
 import (
+	"context"
 	"errors"
 	"encoding/json"
 	"io/ioutil"
@@ -61,6 +62,25 @@ func Test_deleteCluster(t *testing.T) {
 
 	assert.Equal(t, []types.ManagedClusterInfo{}, monitor.ManagedClusterInfo, "Test Delete ManagedCluster: local-cluster")
 
+}
+
+func Test_FetchClusters(t *testing.T) {
+	monitor := NewClusterMonitor()
+	monitor.ManagedClusterInfo = []types.ManagedClusterInfo{{Namespace: "local-cluster", ClusterID: "323a00cd-428a-49fb-80ab-201d2a5d3050"}}
+
+	fetchClusterIDs := make(chan types.ManagedClusterInfo)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go monitor.FetchClusters(ctx, fetchClusterIDs)
+	testData := <-fetchClusterIDs
+
+	assert.Equal(
+		t,
+		types.ManagedClusterInfo{Namespace: "local-cluster", ClusterID: "323a00cd-428a-49fb-80ab-201d2a5d3050"},
+		testData,
+		"Test Fetch ManagedCluster list",
+	)
 }
 
 func Test_isClustermissing(t *testing.T) {

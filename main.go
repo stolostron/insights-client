@@ -1,6 +1,7 @@
 package main
 
 import (
+    "context"
 	"crypto/tls"
 	"flag"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 	"github.com/open-cluster-management/insights-client/pkg/handlers"
 	"github.com/open-cluster-management/insights-client/pkg/monitor"
 	"github.com/open-cluster-management/insights-client/pkg/retriever"
+	"github.com/open-cluster-management/insights-client/pkg/types"
 )
 
 func main() {
@@ -31,33 +33,40 @@ func main() {
 		glog.Info("Built from git commit: ", commit)
 	}
 
-	// Done channel for waiting
-	// fetchPolicyReports := make(chan types.PolicyInfo)
+	fetchClusterIDs := make(chan types.ManagedClusterInfo)
+	fetchPolicyReports := make(chan types.PolicyInfo)
+
+	// Gather the list of clusters under management
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	monitor := monitor.NewClusterMonitor()
 	go monitor.WatchClusters()
+	go monitor.FetchClusters(ctx, fetchClusterIDs)
 
+	// Set up Retiever and cache the Insights content data
 	ret := retriever.NewRetriever(config.Cfg.CCXServer+"/clusters/reports",
 		config.Cfg.CCXServer+"/content", nil, 2*time.Second, "")
 	//Wait for hub cluster id to make GET API call
-	hubId := "-1"
-	for hubId == "-1" {
-		hubId = monitor.GetLocalCluster()
+	hubID := "-1"
+	for hubID == "-1" {
+		hubID = monitor.GetLocalCluster()
 		glog.Info("Waiting for local-cluster Id.")
 		time.Sleep(2 * time.Second)
 	}
 
 	// Wait until we can create the contents map , which will be used to lookup report details
-	contents := ret.InitializeContents(hubId)
+	contents := ret.InitializeContents(hubID)
 	retryCount := 1
 	for contents < 0 {
 		glog.Info("Contents Map not ready. Retrying.")
 		time.Sleep(time.Duration(min(300, retryCount*2)) * time.Second)
-		contents = ret.InitializeContents(hubId)
+		contents = ret.InitializeContents(hubID)
 		retryCount++
 	}
 
-	//go retriever.RetrieveCCXReport(fetchManagedClusters, fetchPolicyReports)
+	// Fetch the reports for each cluster & create the PolicyReport resources for each violation.
+	go ret.RetrieveCCXReport(fetchClusterIDs, fetchPolicyReports)
 
 	router := mux.NewRouter()
 
