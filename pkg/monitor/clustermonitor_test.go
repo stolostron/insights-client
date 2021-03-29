@@ -69,7 +69,9 @@ func Test_FetchClusters(t *testing.T) {
 	monitor.ManagedClusterInfo = []types.ManagedClusterInfo{{Namespace: "local-cluster", ClusterID: "323a00cd-428a-49fb-80ab-201d2a5d3050"}}
 
 	fetchClusterIDs := make(chan types.ManagedClusterInfo)
-	ctx, _ := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	go monitor.FetchClusters(ctx, fetchClusterIDs)
 	testData := <-fetchClusterIDs
 

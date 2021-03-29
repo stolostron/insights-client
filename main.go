@@ -37,7 +37,9 @@ func main() {
 	fetchPolicyReports := make(chan types.PolicyInfo)
 
 	// Gather the list of clusters under management
-	ctx, _ := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	monitor := monitor.NewClusterMonitor()
 	go monitor.WatchClusters()
 	go monitor.FetchClusters(ctx, fetchClusterIDs)
