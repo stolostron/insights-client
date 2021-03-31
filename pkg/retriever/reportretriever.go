@@ -248,6 +248,8 @@ func (r *Retriever) GetContentRequest(ctx context.Context, clusterId string) (*h
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", userAgent)
 	req.Header.Set("Authorization", "Bearer "+r.Token)
+	glog.Infof("Token %s", r.Token)
+	glog.Infof("userAgent %s", userAgent)
 	return req, nil
 }
 
