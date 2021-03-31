@@ -34,7 +34,6 @@ func main() {
 	}
 
 	fetchClusterIDs := make(chan types.ManagedClusterInfo)
-	fetchPolicyReports := make(chan types.PolicyInfo)
 
 	// Gather the list of clusters under management
 	ctx, cancel := context.WithCancel(context.Background())
@@ -66,7 +65,7 @@ func main() {
 	}
 
 	// Fetch the reports for each cluster & create the PolicyReport resources for each violation.
-	go ret.RetrieveCCXReport(fetchClusterIDs, fetchPolicyReports)
+	go ret.RetrieveCCXReport(fetchClusterIDs)
 
 	router := mux.NewRouter()
 

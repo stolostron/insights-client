@@ -29,3 +29,18 @@ type Metadata struct {
 	Status       string   `json:"status"`
 	Tags         []string `json:"tags"`
 }
+
+type FormattedContentData struct {
+	Summary      string   `json:"summary"`
+	Reason       string   `json:"reason"`
+	Resolution   string   `json:"resolution"`
+	Generic      string   `json:"generic"`
+	HasReason    bool     `json:"HasReason"`
+	Condition    string   `json:"condition"`
+	Description  string   `json:"description"`
+	Impact       string   `json:"impact"`
+	Likelihood   int      `json:"likelihood"`
+	Publish_date string   `json:"publish_date"`
+	Status       string   `json:"status"`
+	Tags         []string `json:"tags"`
+}
