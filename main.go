@@ -16,7 +16,7 @@ import (
 	"github.com/open-cluster-management/insights-client/pkg/handlers"
 	"github.com/open-cluster-management/insights-client/pkg/monitor"
 	"github.com/open-cluster-management/insights-client/pkg/retriever"
-	// "github.com/open-cluster-management/insights-client/pkg/processor"
+	"github.com/open-cluster-management/insights-client/pkg/processor"
 	"github.com/open-cluster-management/insights-client/pkg/types"
 )
 
@@ -69,8 +69,8 @@ func main() {
 	// Fetch the reports for each cluster & create the PolicyReport resources for each violation.
 	go ret.RetrieveCCXReport(fetchClusterIDs, fetchPolicyReports)
 
-	// processor := processor.NewProcessor()
-	// go processor.CreateUpdatePolicyReports(fetchPolicyReports)
+	processor := processor.NewProcessor()
+	go processor.CreateUpdatePolicyReports(fetchPolicyReports)
 
 	router := mux.NewRouter()
 
