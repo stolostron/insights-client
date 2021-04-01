@@ -221,29 +221,6 @@ func (r *Retriever) GetPolicyInfo(
 				)
 				return types.ProcessorData{}, unmarshalError
 			}
-			// // Loop through Report array and return a PolicyReport for each violation
-			// for _, report := range reports.Reports {
-			// 	// Find the correct Insight content data from cache
-			// 	reportData := contentsMap[report.Key]
-			// 	if reportData != nil {
-			// 		var contentData types.FormattedContentData
-			// 		reportDataBytes, _ := json.Marshal(reportData)
-			// 		unmarshalError := json.Unmarshal(reportDataBytes, &contentData)
-			// 		if unmarshalError != nil {
-			// 			glog.Infof(
-			// 				"Error unmarshalling Report %v for cluster %s (%s)",
-			// 				unmarshalError,
-			// 				cluster.Namespace,
-			// 				cluster.ClusterID,
-			// 			)
-			// 			return unmarshalError
-			// 		}
-			// 		createPolicyReport(contentData, report, cluster)
-			// 	}
-			// }
-
-			// // Update any existing PolicyReports that have been resolved
-			// updatePolicyReports(reports.Skips, cluster.Namespace)
 
 			return types.ProcessorData{
 				ClusterInfo: cluster,
