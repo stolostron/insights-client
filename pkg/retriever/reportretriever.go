@@ -340,7 +340,7 @@ func createPolicyReport(
 			)
 		}
 	} else if (prResponse.Meta.Name != "" && prResponse.Results[0].Status == "skip") {
-		glog.Info("PolicyReport %s has been reintroduced, updating status to error")
+		glog.Infof("PolicyReport %s has been reintroduced, updating status to error", prResponse.Meta.Name)
 		payload := []patchStringValue{{
 			Op:    "replace",
 			Path:  "/results/0/status",
