@@ -238,7 +238,7 @@ func (r *Retriever) GetPolicyInfo(
 				// Find the correct Insight content data from cache
 				reportData := contentsMap[report.Key]
 				if reportData != nil {
-					var contentData types.FormattedContentData // TODO neeed to update this type for new content
+					var contentData types.FormattedContentData
 					reportDataBytes, _ := json.Marshal(reportData)
 					unmarshalError := json.Unmarshal(reportDataBytes, &contentData)
 					if unmarshalError != nil {
@@ -269,7 +269,7 @@ func createPolicyReport(
 ) {
 	cfg := config.GetConfig()
 	restClient := config.RESTClient(cfg)
-	// PolicyReport name must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character
+	// PolicyReport name must consist of lower case alphanumeric characters, '-' or '.'
 	ruleName := strings.ReplaceAll(report.Component, "_", "-")
 	ruleName = strings.ToLower(ruleName)
 
@@ -282,7 +282,13 @@ func createPolicyReport(
 
 	respBytes, _ := getResp.Raw()
 	var prResponse types.PolicyReportGetResponse
-	json.Unmarshal(respBytes, &prResponse)
+	unmarshalError := json.Unmarshal(respBytes, &prResponse)
+	if unmarshalError != nil {
+		glog.Infof(
+			"Error unmarshalling PolicyReport: %v",
+			unmarshalError,
+		)
+	}
 
 	if (prResponse.Meta.Name == "") {
 		// If the PolicyReport doesn't exist Create it
@@ -303,7 +309,8 @@ func createPolicyReport(
 				Status:   "error",
 				Data: map[string]string{
 					"created_at": policyReport.Publish_date,
-					"total_risk": strconv.Itoa(policyReport.Likelihood), // TODO total_risk is no longer available, need to sync with CCX team to determine best route here
+					// TODO total_risk is no longer available, need to sync with CCX team to determine best route here
+					"total_risk": strconv.Itoa(policyReport.Likelihood),
 					"reason":     policyReport.Reason,
 					"resolution": policyReport.Resolution,
 				},
@@ -333,7 +340,6 @@ func createPolicyReport(
 			)
 		}
 	} else if (prResponse.Meta.Name != "" && prResponse.Results[0].Status == "skip") {
-		// TODO: Rule violation has returned need to update the status to error again.
 		glog.Info("PolicyReport %s has been reintroduced, updating status to error")
 		payload := []patchStringValue{{
 			Op:    "replace",
@@ -366,7 +372,8 @@ func createPolicyReport(
 	}
 }
 
-// updatePolicyReports - Updates status to "skip" for all PolicyReports present in a namespace -> this means the PolicyReport has been resolved
+// updatePolicyReports - Updates status to "skip" for all PolicyReports present in a namespace
+// This means the PolicyReport has been resolved
 func updatePolicyReports(skippedReports []types.SkippedReports, clusterNamespace string) {
 	for _, rule := range skippedReports {
 		glog.Info(rule)
@@ -380,10 +387,15 @@ func updatePolicyReports(skippedReports []types.SkippedReports, clusterNamespace
 
 		respBytes, _ := getResp.Raw()
 		var prResponse types.PolicyReportGetResponse
-		json.Unmarshal(respBytes, &prResponse)
+		unmarshalError := json.Unmarshal(respBytes, &prResponse)
+		if unmarshalError != nil {
+			glog.Infof(
+				"Error unmarshalling PolicyReport: %v",
+				unmarshalError,
+			)
+		}
 
 		if (prResponse.Meta.Name != "") {
-			// Patch PolicyReport: status -> skip as the violation has been resolved
 			glog.Infof("PolicyReport %s has been resolved, updating status to skip", rule.RuleID)
 			payload := []patchStringValue{{
 				Op:    "replace",
