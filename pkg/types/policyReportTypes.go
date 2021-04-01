@@ -36,3 +36,8 @@ type PolicyReportGetResponse struct {
 type PolicyReportResultData struct {
 	Status string `json:"status"`
 }
+
+type ProcessorData struct {
+	ClusterInfo ManagedClusterInfo
+	Reports     Reports
+}

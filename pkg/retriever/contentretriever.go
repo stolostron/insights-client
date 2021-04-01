@@ -9,10 +9,14 @@ import (
 	e "errors"
 	"io/ioutil"
 	"net/http"
+	"sync"
 
 	"github.com/golang/glog"
 	"github.com/open-cluster-management/insights-client/pkg/types"
 )
+
+var contentsMap map[string]map[string]interface{}
+var lock = sync.RWMutex{}
 
 // GetContentRequest - Creates GET request for contents
 func (r *Retriever) GetContentRequest(ctx context.Context, clusterID string) (*http.Request, error) {
