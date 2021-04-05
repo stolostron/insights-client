@@ -297,7 +297,7 @@ func (r *Retriever) InitializeContents(hubId string) int {
 
 // Populate json response from /contents call onto a Map to quick lookup
 func (r *Retriever) createContents(responseBody types.ContentsResponse) {
-	glog.Infof("Creating Contents from json ")
+	glog.Infof("Creating Report Contents from json ")
 	contentsMap = make(map[string]map[string]interface{})
 
 	for content := range responseBody.Content {
@@ -319,6 +319,7 @@ func (r *Retriever) createContents(responseBody types.ContentsResponse) {
 			lock.Unlock()
 		}
 	}
+	glog.Infof("Created %d Report Contents from cloud  ", len(contentsMap))
 }
 
 // Helper function to populate metadata interface{}
