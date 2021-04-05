@@ -225,7 +225,6 @@ func (r *Retriever) GetPolicyInfo(
 			return types.ProcessorData{
 				ClusterInfo: cluster,
 				Reports: reports,
-				Contents: contentsMap,
 			}, nil
 		}
 	}

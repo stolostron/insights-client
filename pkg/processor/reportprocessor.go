@@ -12,6 +12,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/open-cluster-management/insights-client/pkg/config"
 	"github.com/open-cluster-management/insights-client/pkg/types"
+	"github.com/open-cluster-management/insights-client/pkg/retriever"
 	k8sTypes "k8s.io/apimachinery/pkg/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/wg-policy-prototypes/policy-report/api/v1alpha1"
@@ -40,7 +41,7 @@ func (p *Processor) CreateUpdatePolicyReports(input chan types.ProcessorData) {
 	// Loop through Report array and return a PolicyReport for each violation
 	for _, report := range data.Reports.Reports {
 		// Find the correct Insight content data from cache
-		reportData := data.Contents[report.Key]
+		reportData := retriever.ContentsMap[report.Key]
 		if reportData != nil {
 			var contentData types.FormattedContentData
 			reportDataBytes, _ := json.Marshal(reportData)

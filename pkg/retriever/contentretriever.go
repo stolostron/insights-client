@@ -15,7 +15,7 @@ import (
 	"github.com/open-cluster-management/insights-client/pkg/types"
 )
 
-var contentsMap map[string]map[string]interface{}
+var ContentsMap map[string]map[string]interface{}
 var lock = sync.RWMutex{}
 
 // GetContentRequest - Creates GET request for contents
@@ -73,7 +73,7 @@ func (r *Retriever) retrieveCCXContent(clusterID string) int {
 		return -1
 	}
 	r.createContents(contents)
-	return len(contentsMap)
+	return len(ContentsMap)
 }
 
 // InitializeContents ...
@@ -84,7 +84,7 @@ func (r *Retriever) InitializeContents(hubID string) int {
 // Populate json response from /contents call onto a Map to quick lookup
 func (r *Retriever) createContents(responseBody types.ContentsResponse) {
 	glog.Infof("Creating Contents from json ")
-	contentsMap = make(map[string]map[string]interface{})
+	ContentsMap = make(map[string]map[string]interface{})
 
 	for content := range responseBody.Content {
 		for errorName, errorVal := range responseBody.Content[content].Error_keys {
@@ -101,7 +101,7 @@ func (r *Retriever) createContents(responseBody types.ContentsResponse) {
 				}
 			}
 			lock.Lock()
-			contentsMap[errorName] = errorMap
+			ContentsMap[errorName] = errorMap
 			lock.Unlock()
 		}
 	}
@@ -120,7 +120,7 @@ func (r *Retriever) getErrorKey(metadata interface{}, errorMap map[string]interf
 func (r *Retriever) GetContents(errorKey string, key string) interface{} {
 	lock.RLock()
 	defer lock.RUnlock()
-	return contentsMap[errorKey][key]
+	return ContentsMap[errorKey][key]
 }
 
 // GetFields - Given Error_Key gives the fields is has
@@ -128,7 +128,7 @@ func (r *Retriever) GetFields(errorKey string) []string {
 	lock.RLock()
 	defer lock.RUnlock()
 	var fields []string
-	for mkey := range contentsMap[errorKey] {
+	for mkey := range ContentsMap[errorKey] {
 		fields = append(fields, mkey)
 	}
 	return fields

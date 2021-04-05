@@ -40,5 +40,4 @@ type PolicyReportResultData struct {
 type ProcessorData struct {
 	ClusterInfo ManagedClusterInfo
 	Reports     Reports
-	Contents    map[string]map[string]interface{}
 }
