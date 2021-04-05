@@ -19,7 +19,7 @@ import (
 )
 
 var CRDGroup string = "wgpolicyk8s.io"
-var CRDVersion string = "v1alpha1"
+var CRDVersion string = "v1alpha2"
 var SchemeGroupVersion = schema.GroupVersion{Group: CRDGroup, Version: CRDVersion}
 var restClient *rest.RESTClient
 var clientSet *kubernetes.Clientset
