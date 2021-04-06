@@ -46,7 +46,9 @@ func (p *Processor) CreateUpdatePolicyReports(input chan types.ProcessorData) {
 			var contentData types.FormattedContentData
 			reportDataBytes, _ := json.Marshal(reportData)
 			unmarshalError := json.Unmarshal(reportDataBytes, &contentData)
-			if unmarshalError != nil {
+			if unmarshalError == nil {
+				createPolicyReport(contentData, report, data.ClusterInfo)
+			} else {
 				glog.Infof(
 					"Error unmarshalling Report %v for cluster %s (%s)",
 					unmarshalError,
@@ -54,7 +56,8 @@ func (p *Processor) CreateUpdatePolicyReports(input chan types.ProcessorData) {
 					data.ClusterInfo.ClusterID,
 				)
 			}
-			createPolicyReport(contentData, report, data.ClusterInfo)
+		} else {
+			glog.Info("Could not find the content data for this Insight - skipping PolicyReport creation")
 		}
 	}
 
@@ -64,7 +67,7 @@ func (p *Processor) CreateUpdatePolicyReports(input chan types.ProcessorData) {
 
 // createUpdatePolicyReport ...
 func createPolicyReport(
-	policyReport types.FormattedContentData,
+	contentData types.FormattedContentData,
 	report types.ReportData,
 	cluster types.ManagedClusterInfo,
 ) {
@@ -86,12 +89,12 @@ func createPolicyReport(
 	unmarshalError := json.Unmarshal(respBytes, &prResponse)
 	if unmarshalError != nil {
 		glog.Infof(
-			"Error unmarshalling PolicyReport: %v",
+			"Error unmarshalling PolicyReport CR: %v",
 			unmarshalError,
 		)
 	}
 
-	if (prResponse.Meta.Name == "") {
+	if (unmarshalError == nil && prResponse.Meta.Name == "") {
 		// If the PolicyReport doesn't exist Create it
 		// TODO Need to use report.details to fill in the template values
 		// Example: policyReport.Summary may have template strings that need to be replaced by the report.details information
@@ -102,18 +105,18 @@ func createPolicyReport(
 			},
 			Results: []*v1alpha1.PolicyReportResult{{
 				Policy:   report.Key,
-				Message:  policyReport.Description,
+				Message:  contentData.Description,
 				// We will use Scored to represent whether the violation has been resolved
 				// On creation it is false, when the violation is cleared it is set to true
 				Scored:   false,
-				Category: strings.Join(policyReport.Tags, ","),
+				Category: strings.Join(contentData.Tags, ","),
 				Status:   "error",
 				Data: map[string]string{
-					"created_at": policyReport.Publish_date,
+					"created_at": contentData.Publish_date,
 					// TODO total_risk is no longer available, need to sync with CCX team to determine best route here
-					"total_risk": strconv.Itoa(policyReport.Likelihood),
-					"reason":     policyReport.Reason,
-					"resolution": policyReport.Resolution,
+					"total_risk": strconv.Itoa(contentData.Likelihood),
+					"reason":     contentData.Reason,
+					"resolution": contentData.Resolution,
 				},
 			}},
 		}
@@ -140,7 +143,7 @@ func createPolicyReport(
 				cluster.ClusterID,
 			)
 		}
-	} else if (prResponse.Meta.Name != "" && prResponse.Results[0].Status == "skip") {
+	} else if (unmarshalError == nil && prResponse.Meta.Name != "" && prResponse.Results[0].Status == "skip") {
 		glog.Infof("PolicyReport %s has been reintroduced, updating status to error", prResponse.Meta.Name)
 		payload := []patchStringValue{{
 			Op:    "replace",
@@ -158,16 +161,18 @@ func createPolicyReport(
 
 		if resp.Error() != nil {
 			glog.Infof(
-				"Error updating PolicyReport %s status to error for cluster %s: %v",
+				"Error updating PolicyReport %s status to error for cluster %s (%s): %v",
 				report.Component,
 				cluster.Namespace,
+				cluster.ClusterID,
 				resp.Error(),
 			)
 		} else {
 			glog.Infof(
-				"Successfully updated PolicyReport %s status to error for cluster %s",
+				"Successfully updated PolicyReport %s status to error for cluster %s (%s)",
 				report.Component,
 				cluster.Namespace,
+				cluster.ClusterID,
 			)
 		}
 	}
@@ -196,7 +201,7 @@ func updatePolicyReports(skippedReports []types.SkippedReports, clusterNamespace
 			)
 		}
 
-		if (prResponse.Meta.Name != "") {
+		if (unmarshalError == nil && prResponse.Meta.Name != "" && prResponse.Results[0].Status != "skip") {
 			glog.Infof("PolicyReport %s has been resolved, updating status to skip", rule.RuleID)
 			payload := []patchStringValue{{
 				Op:    "replace",
