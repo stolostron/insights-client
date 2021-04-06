@@ -105,7 +105,7 @@ func (r *Retriever) StartTokenRefresh() error {
 }
 
 // RetrieveCCXReport ...
-func (r *Retriever) RetrieveCCXReport(input chan types.ManagedClusterInfo, output chan types.ProcessorData) {
+func (r *Retriever) RetrieveCCXReport(hubID string, input chan types.ManagedClusterInfo, output chan types.ProcessorData) {
 	for {
 		cluster := <-input
 		// If the cluster id is empty do nothing
@@ -114,7 +114,7 @@ func (r *Retriever) RetrieveCCXReport(input chan types.ManagedClusterInfo, outpu
 		}
 
 		glog.Infof("RetrieveCCXReport for cluster %s", cluster.Namespace)
-		req, err := r.GetInsightsRequest(context.TODO(), r.CCXUrl, cluster)
+		req, err := r.CreateInsightsRequest(context.TODO(), r.CCXUrl, cluster, hubID)
 		if err != nil {
 			glog.Warningf("Error creating HttpRequest for cluster %s (%s), %v", cluster.Namespace, cluster.ClusterID, err)
 			continue
@@ -135,11 +135,12 @@ func (r *Retriever) RetrieveCCXReport(input chan types.ManagedClusterInfo, outpu
 	}
 }
 
-// GetInsightsRequest ...
-func (r *Retriever) GetInsightsRequest(
+// CreateInsightsRequest ...
+func (r *Retriever) CreateInsightsRequest(
 	ctx context.Context,
 	endpoint string,
 	cluster types.ManagedClusterInfo,
+	hubID string,
 ) (*http.Request, error) {
 	glog.Infof(
 		"Creating Request for cluster %s (%s) using Insights URL %s",
@@ -161,7 +162,7 @@ func (r *Retriever) GetInsightsRequest(
 	// userAgent for value will be updated to insights-client once the
 	// the task https://github.com/RedHatInsights/insights-results-smart-proxy/issues/450
 	// is completed
-	userAgent := "insights-operator/v1.0.0+b653953-b653953ed174001d5aca50b3515f1fa6f6b28728 cluster/" + cluster.ClusterID
+	userAgent := "insights-operator/v1.0.0+b653953-b653953ed174001d5aca50b3515f1fa6f6b28728 cluster/" + hubID
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", userAgent)
 	req.Header.Set("Authorization", "Bearer "+r.Token)
