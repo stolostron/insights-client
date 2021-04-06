@@ -105,7 +105,11 @@ func (r *Retriever) StartTokenRefresh() error {
 }
 
 // RetrieveCCXReport ...
-func (r *Retriever) RetrieveCCXReport(hubID string, input chan types.ManagedClusterInfo, output chan types.ProcessorData) {
+func (r *Retriever) RetrieveCCXReport(
+	hubID string,
+	input chan types.ManagedClusterInfo,
+	output chan types.ProcessorData,
+) {
 	for {
 		cluster := <-input
 		// If the cluster id is empty do nothing
