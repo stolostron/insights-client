@@ -3,7 +3,8 @@
 package config
 
 import (
-    "sync"
+	"sync"
+
 	"github.com/golang/glog"
 
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -11,11 +12,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-    "k8s.io/client-go/dynamic"
-	"sigs.k8s.io/wg-policy-prototypes/policy-report/api/v1alpha1"
+	"sigs.k8s.io/wg-policy-prototypes/policy-report/api/v1alpha2"
 )
 
 var CRDGroup string = "wgpolicyk8s.io"
@@ -40,7 +41,7 @@ func GetConfig() *rest.Config {
 
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
-		&v1alpha1.PolicyReport{},
+		&v1alpha2.PolicyReport{},
 	)
 	meta_v1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
@@ -71,18 +72,18 @@ func RESTClient(cfg *rest.Config) *rest.RESTClient {
 
 // Get the kubernetes dynamic client.
 func GetDynamicClient() dynamic.Interface {
-    mutex.Lock()
-    defer mutex.Unlock()
-    if dynamicClient != nil {
-        return dynamicClient
-    }
-    newDynamicClient, err := dynamic.NewForConfig(GetConfig())
-    if err != nil {
-        glog.Fatal("Cannot Construct Dynamic Client ", err)
-    }
-    dynamicClient = newDynamicClient
+	mutex.Lock()
+	defer mutex.Unlock()
+	if dynamicClient != nil {
+		return dynamicClient
+	}
+	newDynamicClient, err := dynamic.NewForConfig(GetConfig())
+	if err != nil {
+		glog.Fatal("Cannot Construct Dynamic Client ", err)
+	}
+	dynamicClient = newDynamicClient
 
-    return dynamicClient
+	return dynamicClient
 }
 
 func GetKubeClient() *kubernetes.Clientset {

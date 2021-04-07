@@ -711,6 +711,8 @@ sigs.k8s.io/structured-merge-diff/v4 v4.0.2 h1:YHQV7Dajm86OuqnIR6zAelnDWBRjo+YhY
 sigs.k8s.io/structured-merge-diff/v4 v4.0.2/go.mod h1:bJZC9H9iH24zzfZ/41RGcq60oK1F7G282QMXDPYydCw=
 sigs.k8s.io/wg-policy-prototypes v0.0.0-20210217062615-67e4ac932b26 h1:J/v282oyiYtNIyTlx/7VXaRItnA+6GjB6iiy2ZE3PVE=
 sigs.k8s.io/wg-policy-prototypes v0.0.0-20210217062615-67e4ac932b26/go.mod h1:CMh3v/89E4Kf5plZSbxjUpfFzsEPT8ymbmInB9lUSA4=
+sigs.k8s.io/wg-policy-prototypes v0.0.0-20210401062121-eb9da74ea50d h1:yqyR5UfaIhkGlAtFPSzVJ66RJtcqfijX/UepIJBpLtk=
+sigs.k8s.io/wg-policy-prototypes v0.0.0-20210401062121-eb9da74ea50d/go.mod h1:CMh3v/89E4Kf5plZSbxjUpfFzsEPT8ymbmInB9lUSA4=
 sigs.k8s.io/yaml v1.1.0/go.mod h1:UJmg0vDUVViEyp3mgSv9WPwZCDxu4rQW1olrI1uml+o=
 sigs.k8s.io/yaml v1.2.0 h1:kr/MCeFWJWTwyaHoR9c8EjH9OumOmoF9YGiZd7lFm/Q=
 sigs.k8s.io/yaml v1.2.0/go.mod h1:yfXDCHCao9+ENCvLSE62v9VSji2MKu5jeNfTrofGhJc=

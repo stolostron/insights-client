@@ -6,16 +6,17 @@ package processor
 import (
 	"context"
 	"encoding/json"
-	"strings"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/open-cluster-management/insights-client/pkg/config"
-	"github.com/open-cluster-management/insights-client/pkg/types"
 	"github.com/open-cluster-management/insights-client/pkg/retriever"
-	k8sTypes "k8s.io/apimachinery/pkg/types"
+	"github.com/open-cluster-management/insights-client/pkg/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/wg-policy-prototypes/policy-report/api/v1alpha1"
+	k8sTypes "k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/wg-policy-prototypes/policy-report/api/v1alpha2"
 )
 
 //  patchUint32Value specifies a patch operation for a uint32.
@@ -81,7 +82,7 @@ func createPolicyReport(
 
 	// Try a GET request to see if the PolicyReport already exists
 	getResp := restClient.Get().
-	    Resource("policyreports").
+		Resource("policyreports").
 		Namespace(cluster.Namespace).
 		Name(ruleName).
 		Do(context.TODO())
@@ -96,24 +97,25 @@ func createPolicyReport(
 		)
 	}
 
-	if (unmarshalError == nil && prResponse.Meta.Name == "") {
+	if unmarshalError == nil && prResponse.Meta.Name == "" {
 		// If the PolicyReport doesn't exist Create it
 		// *** Need to use report.details to fill in the template values
 		// Example: policyReport.Summary may have template strings that need to be replaced by the report.details information
-		policyreport := &v1alpha1.PolicyReport{
+		policyreport := &v1alpha2.PolicyReport{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      ruleName,
 				Namespace: cluster.Namespace,
 			},
-			Results: []*v1alpha1.PolicyReportResult{{
-				Policy:   report.Key,
-				Message:  contentData.Description,
-				Scored:   false,
-				Category: strings.Join(contentData.Tags, ","),
-				// We will use Status to represent whether the violation has been resolved
+			Results: []*v1alpha2.PolicyReportResult{{
+				Policy:      report.Key,
+				Description: contentData.Description,
+				Scored:      false,
+				Category:    strings.Join(contentData.Tags, ","),
+				Timestamp:   metav1.Timestamp{Seconds: time.Now().Unix(), Nanos: int32(time.Now().UnixNano())},
+				// We will use Result to represent whether the violation has been resolved
 				// On creation it is error, when the violation is cleared it is set to skip
-				Status:   "error",
-				Data: map[string]string{
+				Result: "error",
+				Properties: map[string]string{
 					"created_at": contentData.Publish_date,
 					// *** total_risk is not currently included in content data, but being added by CCX team.
 					"total_risk": strconv.Itoa(contentData.Likelihood),
@@ -145,7 +147,7 @@ func createPolicyReport(
 				cluster.ClusterID,
 			)
 		}
-	} else if (unmarshalError == nil && prResponse.Meta.Name != "" && prResponse.Results[0].Status == "skip") {
+	} else if unmarshalError == nil && prResponse.Meta.Name != "" && prResponse.Results[0].Status == "skip" {
 		glog.Infof("PolicyReport %s has been reintroduced, updating status to error", prResponse.Meta.Name)
 		payload := []patchStringValue{{
 			Op:    "replace",
@@ -203,7 +205,7 @@ func updatePolicyReports(skippedReports []types.SkippedReports, clusterNamespace
 			)
 		}
 
-		if (unmarshalError == nil && prResponse.Meta.Name != "" && prResponse.Results[0].Status != "skip") {
+		if unmarshalError == nil && prResponse.Meta.Name != "" && prResponse.Results[0].Status != "skip" {
 			glog.Infof("PolicyReport %s has been resolved, updating status to skip", rule.RuleID)
 			payload := []patchStringValue{{
 				Op:    "replace",
