@@ -151,7 +151,7 @@ func createPolicyReport(
 		glog.Infof("PolicyReport %s has been reintroduced, updating status to error", prResponse.Meta.Name)
 		payload := []patchStringValue{{
 			Op:    "replace",
-			Path:  "/results/0/status",
+			Path:  "/results/0/result",
 			Value: "error",
 		}}
 		payloadBytes, _ := json.Marshal(payload)
@@ -209,7 +209,7 @@ func updatePolicyReports(skippedReports []types.SkippedReports, clusterNamespace
 			glog.Infof("PolicyReport %s has been resolved, updating status to skip", rule.RuleID)
 			payload := []patchStringValue{{
 				Op:    "replace",
-				Path:  "/results/0/status",
+				Path:  "/results/0/result",
 				Value: "skip",
 			}}
 			payloadBytes, _ := json.Marshal(payload)
