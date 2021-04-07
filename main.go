@@ -70,7 +70,7 @@ func main() {
 	go ret.RetrieveCCXReport(hubID, fetchClusterIDs, fetchPolicyReports)
 
 	processor := processor.NewProcessor()
-	go processor.CreateUpdatePolicyReports(fetchPolicyReports)
+	go processor.CreateUpdatePolicyReports(fetchPolicyReports, ret, hubID)
 
 	router := mux.NewRouter()
 

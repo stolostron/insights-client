@@ -36,7 +36,7 @@ func NewProcessor() *Processor {
 }
 
 // CreateUpdatePolicyReports ...
-func (p *Processor) CreateUpdatePolicyReports(input chan types.ProcessorData) {
+func (p *Processor) CreateUpdatePolicyReports(input chan types.ProcessorData, ret *retriever.Retriever, hubID string) {
 	data := <-input
 	// Loop through Report array and return a PolicyReport for each violation
 	for _, report := range data.Reports.Reports {
@@ -57,7 +57,9 @@ func (p *Processor) CreateUpdatePolicyReports(input chan types.ProcessorData) {
 				)
 			}
 		} else {
-			glog.Info("Could not find the content data for this Insight - skipping PolicyReport creation")
+			glog.Info("Could not find the content data for this Insight - Refreshing content list")
+
+			ret.InitializeContents(hubID)
 		}
 	}
 
@@ -96,7 +98,7 @@ func createPolicyReport(
 
 	if (unmarshalError == nil && prResponse.Meta.Name == "") {
 		// If the PolicyReport doesn't exist Create it
-		// TODO Need to use report.details to fill in the template values
+		// *** Need to use report.details to fill in the template values
 		// Example: policyReport.Summary may have template strings that need to be replaced by the report.details information
 		policyreport := &v1alpha1.PolicyReport{
 			ObjectMeta: metav1.ObjectMeta{
@@ -106,14 +108,14 @@ func createPolicyReport(
 			Results: []*v1alpha1.PolicyReportResult{{
 				Policy:   report.Key,
 				Message:  contentData.Description,
-				// We will use Scored to represent whether the violation has been resolved
-				// On creation it is false, when the violation is cleared it is set to true
 				Scored:   false,
 				Category: strings.Join(contentData.Tags, ","),
+				// We will use Status to represent whether the violation has been resolved
+				// On creation it is error, when the violation is cleared it is set to skip
 				Status:   "error",
 				Data: map[string]string{
 					"created_at": contentData.Publish_date,
-					// TODO total_risk is no longer available, need to sync with CCX team to determine best route here
+					// *** total_risk is not currently included in content data, but being added by CCX team.
 					"total_risk": strconv.Itoa(contentData.Likelihood),
 					"reason":     contentData.Reason,
 					"resolution": contentData.Resolution,
