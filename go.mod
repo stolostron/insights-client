@@ -18,6 +18,6 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	k8s.io/apimachinery v0.20.4
 	k8s.io/client-go v0.20.4
-	sigs.k8s.io/wg-policy-prototypes v0.0.0-20210217062615-67e4ac932b26
+	sigs.k8s.io/wg-policy-prototypes v0.0.0-20210401062121-eb9da74ea50d
 
 )
