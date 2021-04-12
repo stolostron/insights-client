@@ -1,7 +1,7 @@
 package main
 
 import (
-    "context"
+	"context"
 	"crypto/tls"
 	"flag"
 	"fmt"
@@ -15,8 +15,8 @@ import (
 	"github.com/open-cluster-management/insights-client/pkg/config"
 	"github.com/open-cluster-management/insights-client/pkg/handlers"
 	"github.com/open-cluster-management/insights-client/pkg/monitor"
-	"github.com/open-cluster-management/insights-client/pkg/retriever"
 	"github.com/open-cluster-management/insights-client/pkg/processor"
+	"github.com/open-cluster-management/insights-client/pkg/retriever"
 	"github.com/open-cluster-management/insights-client/pkg/types"
 )
 
