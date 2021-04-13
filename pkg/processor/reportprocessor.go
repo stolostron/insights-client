@@ -38,34 +38,36 @@ func NewProcessor() *Processor {
 
 // CreateUpdatePolicyReports ...
 func (p *Processor) CreateUpdatePolicyReports(input chan types.ProcessorData, ret *retriever.Retriever, hubID string) {
-	data := <-input
-	// Loop through Report array and return a PolicyReport for each violation
-	for _, report := range data.Reports.Reports {
-		// Find the correct Insight content data from cache
-		reportData := retriever.ContentsMap[report.Key]
-		if reportData != nil {
-			var contentData types.FormattedContentData
-			reportDataBytes, _ := json.Marshal(reportData)
-			unmarshalError := json.Unmarshal(reportDataBytes, &contentData)
-			if unmarshalError == nil {
-				createPolicyReport(contentData, report, data.ClusterInfo)
+	for {
+		data := <-input
+		// Loop through Report array and return a PolicyReport for each violation
+		for _, report := range data.Reports.Reports {
+			// Find the correct Insight content data from cache
+			reportData := retriever.ContentsMap[report.Key]
+			if reportData != nil {
+				var contentData types.FormattedContentData
+				reportDataBytes, _ := json.Marshal(reportData)
+				unmarshalError := json.Unmarshal(reportDataBytes, &contentData)
+				if unmarshalError == nil {
+					createPolicyReport(contentData, report, data.ClusterInfo)
+				} else {
+					glog.Infof(
+						"Error unmarshalling Report %v for cluster %s (%s)",
+						unmarshalError,
+						data.ClusterInfo.Namespace,
+						data.ClusterInfo.ClusterID,
+					)
+				}
 			} else {
-				glog.Infof(
-					"Error unmarshalling Report %v for cluster %s (%s)",
-					unmarshalError,
-					data.ClusterInfo.Namespace,
-					data.ClusterInfo.ClusterID,
-				)
+				glog.Info("Could not find the content data for this Insight - Refreshing content list")
+
+				ret.InitializeContents(hubID)
 			}
-		} else {
-			glog.Info("Could not find the content data for this Insight - Refreshing content list")
-
-			ret.InitializeContents(hubID)
 		}
-	}
 
-	// Update any existing PolicyReports that have been resolved
-	updatePolicyReports(data.Reports.Skips, data.ClusterInfo.Namespace)
+		// Update any existing PolicyReports that have been resolved
+		updatePolicyReports(data.Reports.Skips, data.ClusterInfo.Namespace)
+	}
 }
 
 // createUpdatePolicyReport ...

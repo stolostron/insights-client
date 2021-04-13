@@ -134,7 +134,6 @@ func (r *Retriever) RetrieveCCXReport(
 			glog.Warningf("Error creating PolicyInfo for cluster %s (%s), %v", cluster.Namespace, cluster.ClusterID, err)
 			continue
 		}
-
 		output <- policyReports
 	}
 }
@@ -229,7 +228,7 @@ func (r *Retriever) GetPolicyInfo(
 
 			return types.ProcessorData{
 				ClusterInfo: cluster,
-				Reports: reports,
+				Reports:     reports,
 			}, nil
 		}
 	}

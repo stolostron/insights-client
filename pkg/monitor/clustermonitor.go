@@ -22,6 +22,8 @@ import (
 	clusterv1 "github.com/open-cluster-management/api/cluster/v1"
 )
 
+var lock = sync.RWMutex{}
+
 // Find returns a bool if the item exists in the given slice
 func Find(slice []types.ManagedClusterInfo, val types.ManagedClusterInfo) (int, bool) {
 	for i, item := range slice {
@@ -59,9 +61,14 @@ type Monitor struct {
 	clusterPollInterval time.Duration // How often we want to update managed cluster list
 }
 
+var m *Monitor
+
 // NewClusterMonitor ...
 func NewClusterMonitor() *Monitor {
-	m := &Monitor{
+	if m != nil {
+		return m
+	}
+	m = &Monitor{
 		ManagedClusterInfo:  []types.ManagedClusterInfo{},
 		clusterPollInterval: 1 * time.Minute,
 	}
@@ -170,10 +177,12 @@ func (m *Monitor) addCluster(managedCluster *clusterv1.ManagedCluster) {
 	// We only get Insights for OpenShift clusters versioned 4.x or greater.
 	if clusterVendor == "OpenShift" && version >= 4 {
 		glog.Infof("Adding %s to Insights cluster list", managedCluster.GetName())
+		lock.Lock()
 		m.ManagedClusterInfo = append(m.ManagedClusterInfo, types.ManagedClusterInfo{
 			ClusterID: clusterID,
 			Namespace: managedCluster.GetName(),
 		})
+		lock.Unlock()
 	}
 }
 
@@ -223,6 +232,8 @@ func (m *Monitor) deleteCluster(managedCluster *clusterv1.ManagedCluster) {
 // FetchClusters forwards the managed clusters to RetrieveCCXReports function
 func (m *Monitor) FetchClusters(ctx context.Context, input chan types.ManagedClusterInfo) {
 	wait.Until(func() {
+		lock.RLock()
+		defer lock.RUnlock()
 		for _, cluster := range m.ManagedClusterInfo {
 			glog.Infof("Starting to get  cluster report for  %s", cluster)
 			input <- cluster
@@ -232,6 +243,8 @@ func (m *Monitor) FetchClusters(ctx context.Context, input chan types.ManagedClu
 
 // GetLocalCluster Get Local cluster ID
 func (m *Monitor) GetLocalCluster() string {
+	lock.RLock()
+	defer lock.RUnlock()
 	glog.V(2).Info("Get Local Cluster ID.")
 	for _, cluster := range m.ManagedClusterInfo {
 		if "local-cluster" == cluster.Namespace {
