@@ -3,7 +3,6 @@
 package monitor
 
 import (
-	"context"
 	"encoding/json"
 	"strconv"
 	"strings"
@@ -15,7 +14,6 @@ import (
 	"github.com/open-cluster-management/insights-client/pkg/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/tools/cache"
 
@@ -58,7 +56,7 @@ func GetClusterClaimInfo(managedCluster *clusterv1.ManagedCluster) (string, int6
 // Monitor struct
 type Monitor struct {
 	ManagedClusterInfo  []types.ManagedClusterInfo
-	clusterPollInterval time.Duration // How often we want to update managed cluster list
+	ClusterPollInterval time.Duration // How often we want to update managed cluster list
 }
 
 var m *Monitor
@@ -70,7 +68,7 @@ func NewClusterMonitor() *Monitor {
 	}
 	m = &Monitor{
 		ManagedClusterInfo:  []types.ManagedClusterInfo{},
-		clusterPollInterval: 1 * time.Minute,
+		ClusterPollInterval: 10 * time.Minute,
 	}
 	return m
 }
@@ -130,7 +128,7 @@ func (m *Monitor) stopAndStartInformer(groupVersion string, informer cache.Share
 				go informer.Run(stopper)
 			}
 		}
-		time.Sleep(time.Duration(m.clusterPollInterval))
+		time.Sleep(time.Duration(m.ClusterPollInterval))
 	}
 }
 
@@ -227,18 +225,6 @@ func (m *Monitor) deleteCluster(managedCluster *clusterv1.ManagedCluster) {
 			m.ManagedClusterInfo = append(m.ManagedClusterInfo[:clusterIdx], m.ManagedClusterInfo[clusterIdx+1:]...)
 		}
 	}
-}
-
-// FetchClusters forwards the managed clusters to RetrieveCCXReports function
-func (m *Monitor) FetchClusters(ctx context.Context, input chan types.ManagedClusterInfo) {
-	wait.Until(func() {
-		lock.RLock()
-		defer lock.RUnlock()
-		for _, cluster := range m.ManagedClusterInfo {
-			glog.Infof("Starting to get  cluster report for  %s", cluster)
-			input <- cluster
-		}
-	}, m.clusterPollInterval, ctx.Done())
 }
 
 // GetLocalCluster Get Local cluster ID

@@ -7,7 +7,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	mocks "github.com/open-cluster-management/insights-client/pkg/utils"
 )
@@ -22,7 +21,7 @@ func TestCallContents(t *testing.T) {
 	ts.EnableHTTP2 = true
 	defer ts.Close()
 
-	ret := NewRetriever("testCCXUrl", ts.URL, nil, 2*time.Second, "testToken")
+	ret := NewRetriever("testCCXUrl", ts.URL, nil, "testToken")
 	req, _ := ret.GetContentRequest(context.TODO(), "34c3ecc5-624a-49a5-bab8-4fdc5e51a266")
 	if req.Header.Get("User-Agent") != "insights-operator/v1.0.0+b653953-b653953ed174001d5aca50b3515f1fa6f6b28728 cluster/34c3ecc5-624a-49a5-bab8-4fdc5e51a266" {
 		t.Errorf("Header User-Agent not formed correct    : %s", req.Header.Get("User-Agent"))
