@@ -66,7 +66,7 @@ func main() {
 	processor := processor.NewProcessor()
 	go processor.CreateUpdatePolicyReports(fetchPolicyReports, ret, hubID)
 	//start triggering reports for clusters
-	go ret.FetchClusters(monitor, fetchClusterIDs)
+	go ret.FetchClusters(monitor, fetchClusterIDs, true)
 
 	router := mux.NewRouter()
 

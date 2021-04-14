@@ -235,13 +235,15 @@ func (r *Retriever) GetPolicyInfo(
 }
 
 // FetchClusters forwards the managed clusters to RetrieveCCXReports function
-func (r *Retriever) FetchClusters(monitor *monitor.Monitor, input chan types.ManagedClusterInfo) {
+func (r *Retriever) FetchClusters(monitor *monitor.Monitor, input chan types.ManagedClusterInfo, refreshToken bool) {
 	ticker := time.NewTicker(monitor.ClusterPollInterval)
 	defer ticker.Stop()
 	for ; true; <-ticker.C {
-		err := r.StartTokenRefresh()
-		if err != nil {
-			glog.Warningf("Unable to get CRC Token, Using previous Token: %v", err)
+		if refreshToken {
+			err := r.StartTokenRefresh()
+			if err != nil {
+				glog.Warningf("Unable to get CRC Token, Using previous Token: %v", err)
+			}
 		}
 		lock.RLock()
 		for _, cluster := range monitor.ManagedClusterInfo {

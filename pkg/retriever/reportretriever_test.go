@@ -65,7 +65,7 @@ func Test_FetchClusters(t *testing.T) {
 
 	ret := NewRetriever("testServer", "testContentUrl", nil, "testToken")
 
-	go ret.FetchClusters(monitor, fetchClusterIDs)
+	go ret.FetchClusters(monitor, fetchClusterIDs, false)
 	testData := <-fetchClusterIDs
 
 	assert.Equal(
