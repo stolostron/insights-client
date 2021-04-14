@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"crypto/tls"
 	"flag"
 	"fmt"
@@ -37,17 +36,12 @@ func main() {
 	fetchClusterIDs := make(chan types.ManagedClusterInfo)
 	fetchPolicyReports := make(chan types.ProcessorData)
 
-	// Gather the list of clusters under management
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	monitor := monitor.NewClusterMonitor()
 	go monitor.WatchClusters()
-	go monitor.FetchClusters(ctx, fetchClusterIDs)
 
 	// Set up Retiever and cache the Insights content data
 	ret := retriever.NewRetriever(config.Cfg.CCXServer+"/clusters/reports",
-		config.Cfg.CCXServer+"/content", nil, 2*time.Second, "")
+		config.Cfg.CCXServer+"/content", nil, "")
 	//Wait for hub cluster id to make GET API call
 	hubID := "-1"
 	for hubID == "-1" {
@@ -71,6 +65,8 @@ func main() {
 
 	processor := processor.NewProcessor()
 	go processor.CreateUpdatePolicyReports(fetchPolicyReports, ret, hubID)
+	//start triggering reports for clusters
+	go ret.FetchClusters(monitor, fetchClusterIDs, true)
 
 	router := mux.NewRouter()
 

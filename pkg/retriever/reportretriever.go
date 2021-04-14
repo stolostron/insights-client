@@ -16,6 +16,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/open-cluster-management/insights-client/pkg/config"
+	"github.com/open-cluster-management/insights-client/pkg/monitor"
 	"github.com/open-cluster-management/insights-client/pkg/types"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,11 +24,10 @@ import (
 
 // Retriever struct
 type Retriever struct {
-	CCXUrl                  string
-	ContentURL              string
-	Client                  *http.Client
-	Token                   string // token to connect to CRC
-	TokenValidationInterval time.Duration
+	CCXUrl     string
+	ContentURL string
+	Client     *http.Client
+	Token      string // token to connect to CRC
 }
 
 type serializedAuthMap struct {
@@ -39,15 +39,14 @@ type serializedAuth struct {
 
 // NewRetriever ...
 func NewRetriever(ccxurl string, ContentURL string, client *http.Client,
-	tokenValidationInterval time.Duration, token string) *Retriever {
+	token string) *Retriever {
 	if client == nil {
 		client = &http.Client{}
 	}
 	r := &Retriever{
-		TokenValidationInterval: tokenValidationInterval,
-		Client:                  client,
-		CCXUrl:                  ccxurl,
-		ContentURL:              ContentURL,
+		Client:     client,
+		CCXUrl:     ccxurl,
+		ContentURL: ContentURL,
 	}
 	if token == "" {
 		r.setUpRetriever()
@@ -233,4 +232,25 @@ func (r *Retriever) GetPolicyInfo(
 		}
 	}
 	return types.ProcessorData{}, nil
+}
+
+// FetchClusters forwards the managed clusters to RetrieveCCXReports function
+func (r *Retriever) FetchClusters(monitor *monitor.Monitor, input chan types.ManagedClusterInfo, refreshToken bool) {
+	ticker := time.NewTicker(monitor.ClusterPollInterval)
+	defer ticker.Stop()
+	for ; true; <-ticker.C {
+		if refreshToken {
+			err := r.StartTokenRefresh()
+			if err != nil {
+				glog.Warningf("Unable to get CRC Token, Using previous Token: %v", err)
+			}
+		}
+		lock.RLock()
+		for _, cluster := range monitor.ManagedClusterInfo {
+			glog.Infof("Starting to get  cluster report for  %s", cluster)
+			input <- cluster
+		}
+		lock.RUnlock()
+	}
+
 }
