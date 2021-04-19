@@ -16,10 +16,10 @@ type Reports struct {
 }
 
 type ReportData struct {
-	RuleID     string              `json:"rule_id"`
-	Key        string              `json:"key"`
-	Component  string              `json:"component"`
-	Details    map[string]string   `json:"details"`
+	RuleID    string      `json:"rule_id"`
+	Key       string      `json:"key"`
+	Component string      `json:"component"`
+	Details   interface{} `json:"details"`
 }
 
 type SkippedReports struct {
