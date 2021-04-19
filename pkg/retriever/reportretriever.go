@@ -95,7 +95,7 @@ func (r *Retriever) StartTokenRefresh() error {
 				}
 				if len(token) > 0 {
 					glog.V(2).Info("Found cloud.openshift.com token ")
-					r.Token = token
+					r.Token = "Bearer " + token
 				}
 			}
 		}
@@ -167,7 +167,7 @@ func (r *Retriever) CreateInsightsRequest(
 	userAgent := "insights-operator/v1.0.0+b653953-b653953ed174001d5aca50b3515f1fa6f6b28728 cluster/" + hubID
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", userAgent)
-	req.Header.Set("Authorization", "Bearer "+r.Token)
+	req.Header.Set("Authorization", r.Token)
 	return req, nil
 }
 
