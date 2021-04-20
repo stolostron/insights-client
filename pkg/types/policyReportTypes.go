@@ -34,7 +34,8 @@ type PolicyReportGetResponse struct {
 }
 
 type PolicyReportResultData struct {
-	Status string `json:"status"`
+    Status     string `json:"status"`
+    Properties map[string]string
 }
 
 type ProcessorData struct {
