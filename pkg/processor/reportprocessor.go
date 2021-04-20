@@ -188,7 +188,7 @@ func createPolicyReport(
 // This means the PolicyReport has been resolved
 func updatePolicyReports(skippedReports []types.SkippedReports, clusterNamespace string) {
 	for _, rule := range skippedReports {
-		glog.Info(rule)
+		glog.Info("Skipped rule ", rule)
 		cfg := config.GetConfig()
 		restClient := config.RESTClient(cfg)
 		getResp := restClient.Get().

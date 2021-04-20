@@ -41,7 +41,7 @@ func main() {
 
 	// Set up Retiever and cache the Insights content data
 	ret := retriever.NewRetriever(config.Cfg.CCXServer+"/clusters/reports",
-		config.Cfg.CCXServer+"/content", nil, "")
+		config.Cfg.CCXServer+"/content", nil, config.Cfg.CCXToken)
 	//Wait for hub cluster id to make GET API call
 	hubID := "-1"
 	for hubID == "-1" {
@@ -65,8 +65,13 @@ func main() {
 
 	processor := processor.NewProcessor()
 	go processor.CreateUpdatePolicyReports(fetchPolicyReports, ret, hubID)
+
+	refreshToken := true
+	if config.Cfg.CCXToken != "" {
+		refreshToken = false
+	}
 	//start triggering reports for clusters
-	go ret.FetchClusters(monitor, fetchClusterIDs, true)
+	go ret.FetchClusters(monitor, fetchClusterIDs, refreshToken)
 
 	router := mux.NewRouter()
 

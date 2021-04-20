@@ -24,6 +24,7 @@ type Config struct {
 	UseMock     bool   `env:"USE_MOCK"`     // Use Mock Server or actual endpoint
 	CCXServer   string `env:"CCX_SERVER"`
 	KubeConfig  string `env:"KUBECONFIG"` // Local kubeconfig path
+	CCXToken    string `env:"CCX_TOKEN"`  // Token to access CCX server , when pull-secret cannot be used
 }
 
 // Cfg service configuration
@@ -36,6 +37,7 @@ func init() {
 	// Simply put, the order of preference is env -> default constants (from left to right)
 	setDefault(&Cfg.ServicePort, "SERVICE_PORT", DEFAULT_SERVICE_PORT)
 	setDefault(&Cfg.CCXServer, "CCX_SERVER", DEFAULT_CCX_SERVER)
+	setDefault(&Cfg.CCXToken, "CCX_TOKEN", "")
 	setDefaultInt(&Cfg.HTTPTimeout, "HTTP_TIMEOUT", DEFAULT_HTTP_TIMEOUT)
 	setDefaultBool(&Cfg.UseMock, "USE_MOCK", DEFAULT_USE_MOCK)
 	defaultKubePath := filepath.Join(os.Getenv("HOME"), ".kube", "config")

@@ -32,7 +32,7 @@ func (r *Retriever) GetContentRequest(ctx context.Context, clusterID string) (*h
 	userAgent := "insights-operator/v1.0.0+b653953-b653953ed174001d5aca50b3515f1fa6f6b28728 cluster/" + clusterID
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", userAgent)
-	req.Header.Set("Authorization", "Bearer "+r.Token)
+	req.Header.Set("Authorization", r.Token)
 	return req, nil
 }
 
