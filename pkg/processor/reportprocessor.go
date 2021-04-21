@@ -38,7 +38,7 @@ type patchPRResultsValue struct {
 type Processor struct {
 }
 
-func indexOf(ruleID string, prResults []types.PolicyReportResultData) (int) {
+func findRuleIndex(ruleID string, prResults []types.PolicyReportResultData) (int) {
     for idx, value := range prResults {
         if ruleID == value.Properties["component"] {
             return idx
@@ -100,7 +100,7 @@ func createPolicyReport(
     for _, report := range reports {
         // Find the correct Insight content data from cache
         reportData := retriever.ContentsMap[report.Key]
-        ruleIndex := indexOf(report.Component, prResponse.Results)
+        ruleIndex := findRuleIndex(report.Component, prResponse.Results)
         if (reportData == nil) {
             glog.Infof(
                 "Could not find the content data for rule %s - Refreshing content list",
@@ -127,7 +127,6 @@ func createPolicyReport(
                         "total_risk": strconv.Itoa(contentData.Likelihood),
                         "reason":     contentData.Reason, // Need to figure out where to store this value outside of the PR
                         "resolution": contentData.Resolution, // Need to figure out where to store this value outside of the PR
-                        "rule_id":    report.RuleID,
                         "component":  report.Component,
                     },
                 })
@@ -212,10 +211,11 @@ func updateViolationSkips(
     prResponse types.PolicyReportGetResponse,
     clusterNamespace string,
 ) {
-    var payload []patchStringValue
+	var payload []patchStringValue
+	// Find any rules that are now resolved
     for _, rule := range skippedReports {
         for idx, resultRule := range prResponse.Results {
-            if prResponse.Meta.Name != "" && resultRule.Status != "skip" && rule.RuleID == resultRule.Properties["Component"] {
+            if prResponse.Meta.Name != "" && resultRule.Status != "skip" && rule.RuleID == resultRule.Properties["component"] {
                 glog.Infof("PolicyReport violation %s has been resolved, updating status to skip", rule.RuleID)
                 payload = append(payload, patchStringValue{
                     Op:    "replace",
