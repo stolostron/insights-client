@@ -3,6 +3,7 @@
 package monitor
 
 import (
+	"context"
 	"encoding/json"
 	"strconv"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/open-cluster-management/insights-client/pkg/config"
 	"github.com/open-cluster-management/insights-client/pkg/types"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic/dynamicinformer"
@@ -170,7 +172,10 @@ func (m *Monitor) processCluster(obj interface{}, handlerType string) {
 
 func (m *Monitor) addCluster(managedCluster *clusterv1.ManagedCluster) {
 	glog.V(2).Info("Processing Cluster Addition.")
-
+	// We add the local cluster during Initialization.Using the method GetLocalCluster
+	if managedCluster.GetName() == "local-cluster" {
+		return
+	}
 	clusterVendor, version, clusterID := GetClusterClaimInfo(managedCluster)
 	// We only get Insights for OpenShift clusters versioned 4.x or greater.
 	if clusterVendor == "OpenShift" && version >= 4 {
@@ -229,13 +234,29 @@ func (m *Monitor) deleteCluster(managedCluster *clusterv1.ManagedCluster) {
 
 // GetLocalCluster Get Local cluster ID
 func (m *Monitor) GetLocalCluster() string {
-	lock.RLock()
-	defer lock.RUnlock()
-	glog.V(2).Info("Get Local Cluster ID.")
-	for _, cluster := range m.ManagedClusterInfo {
-		if "local-cluster" == cluster.Namespace {
-			return cluster.ClusterID
-		}
+	var clusterVersionGvr = schema.GroupVersionResource{
+		Group:    "config.openshift.io",
+		Version:  "v1",
+		Resource: "clusterversions",
 	}
-	return "-1"
+	glog.V(2).Info("Get Local Cluster ID.")
+	dynamicClient := config.GetDynamicClient()
+	versionObj, err := dynamicClient.Resource(clusterVersionGvr).Get(context.TODO(), "version", metav1.GetOptions{})
+	if err != nil {
+		glog.V(2).Infof("Failed to get clusterversions : %v", err)
+		return "-1"
+	}
+	clusterID, _, err := unstructured.NestedString(versionObj.Object, "spec", "clusterID")
+	if err != nil {
+		glog.V(2).Infof("Failed to get OCP clusterID from version: %v", err)
+		return "-1"
+	}
+	lock.Lock()
+	m.ManagedClusterInfo = append(m.ManagedClusterInfo, types.ManagedClusterInfo{
+		ClusterID: clusterID,
+		Namespace: "local-cluster",
+	})
+	lock.Unlock()
+
+	return clusterID
 }
