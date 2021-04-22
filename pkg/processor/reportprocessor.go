@@ -4,7 +4,6 @@
 package processor
 
 import (
-	// "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
     "context"
     "encoding/json"
     "strconv"
@@ -107,6 +106,33 @@ func getPolicyReportResults(
 	return newPolicyReportViolations
 }
 
+func patchRequest(
+	prResponse v1alpha2.PolicyReport,
+    clusterInfo types.ManagedClusterInfo,
+) (error) {
+	prResponse.SetManagedFields(nil)
+	data, marshalErr := json.Marshal(prResponse)
+	if marshalErr != nil {
+		glog.Warningf("Error Marshalling PolicyReport patch object for cluster %s: %v", clusterInfo.Namespace, marshalErr)
+		return marshalErr
+	}
+
+	dynamicClient := config.GetDynamicClient()
+	forcePatch := true
+	_, err := dynamicClient.Resource(policyReportGvr).Namespace(clusterInfo.Namespace).Patch(
+		context.TODO(),
+		clusterInfo.Namespace,
+		k8sTypes.ApplyPatchType,
+		data,
+		metav1.PatchOptions{
+			FieldManager: "insights-client",
+			Force: &forcePatch,
+		},
+	)
+	
+	return err
+}
+
 // CreateUpdatePolicyReports ...
 func (p *Processor) CreateUpdatePolicyReports(input chan types.ProcessorData) {
     for {
@@ -121,7 +147,10 @@ func (p *Processor) CreateUpdatePolicyReports(input chan types.ProcessorData) {
 		)
 
 		if policyReportRes != nil {
-			unstructConvErr := runtime.DefaultUnstructuredConverter.FromUnstructured(policyReportRes.UnstructuredContent(), &prResponse)
+			unstructConvErr := runtime.DefaultUnstructuredConverter.FromUnstructured(
+				policyReportRes.UnstructuredContent(),
+				&prResponse,
+			)
 			if unstructConvErr != nil {
 				glog.Warningf("Error unstructuring PolicyReport for cluster: %s", data.ClusterInfo.Namespace)
 				return
@@ -168,7 +197,11 @@ func createPolicyReport(
 		obj := &unstructured.Unstructured{Object: prUnstructured}
 
 		dynamicClient := config.GetDynamicClient()
-		_, err := dynamicClient.Resource(policyReportGvr).Namespace(clusterInfo.Namespace).Create(context.TODO(), obj, metav1.CreateOptions{})
+		_, err := dynamicClient.Resource(policyReportGvr).Namespace(clusterInfo.Namespace).Create(
+			context.TODO(),
+			obj,
+			metav1.CreateOptions{},
+		)
 
 		if err != nil {
 			glog.Infof(
@@ -196,25 +229,7 @@ func addPolicyReportViolations(
 	if len(newPolicyReportViolations) > 0 {
 		// merge existing PolicyReport results with new results
 		prResponse.Results = append(prResponse.Results, newPolicyReportViolations...)
-		prResponse.SetManagedFields(nil)
-		data, marshalErr := json.Marshal(prResponse)
-		if marshalErr != nil {
-			glog.Warningf("Error Marshalling PolicyReport patch object for cluster %s: %v", clusterInfo.Namespace, marshalErr)
-			return
-		}
-
-		dynamicClient := config.GetDynamicClient()
-		forcePatch := true
-		_, err := dynamicClient.Resource(policyReportGvr).Namespace(clusterInfo.Namespace).Patch(
-			context.TODO(),
-			clusterInfo.Namespace,
-			k8sTypes.ApplyPatchType,
-			data,
-			metav1.PatchOptions{
-				FieldManager: "insights-client",
-				Force: &forcePatch,
-			},
-		)
+		err := patchRequest(prResponse, clusterInfo)
 
 		if err != nil {
 			glog.Infof(
@@ -255,23 +270,7 @@ func updatePolicyReportResultStatus(
 		// Apply patch only if there are violations that have been resolved
 		if isUpdatedStatuses {
 			prResponse.SetManagedFields(nil)
-			data, marshalErr := json.Marshal(prResponse)
-			if marshalErr != nil {
-				glog.Warningf("Error Marshalling PolicyReport patch object for cluster %s: %v", clusterInfo.Namespace, marshalErr)
-			}
-
-			dynamicClient := config.GetDynamicClient()
-			forcePatch := true
-			_, err := dynamicClient.Resource(policyReportGvr).Namespace(clusterInfo.Namespace).Patch(
-				context.TODO(),
-				clusterInfo.Namespace,
-				k8sTypes.ApplyPatchType,
-				data,
-				metav1.PatchOptions{
-					FieldManager: "insights-client",
-					Force: &forcePatch,
-				},
-			)
+			err := patchRequest(prResponse, clusterInfo)
 
 			if err != nil {
 				glog.Infof(
