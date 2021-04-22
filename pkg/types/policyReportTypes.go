@@ -26,18 +26,6 @@ type SkippedReports struct {
 	RuleID string `json:"rule_fqdn"`
 }
 
-type PolicyReportGetResponse struct {
-	Meta struct {
-		Name string `json:"name"`
-	} `json:"metadata"`
-	Results []PolicyReportResultData `json:"results"`
-}
-
-type PolicyReportResultData struct {
-    Status     string             `json:"status"`
-    Properties map[string]string  `json:"properties"`
-}
-
 type ProcessorData struct {
 	ClusterInfo ManagedClusterInfo
 	Reports     Reports

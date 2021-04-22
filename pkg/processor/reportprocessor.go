@@ -4,6 +4,7 @@
 package processor
 
 import (
+	// "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
     "context"
     "encoding/json"
     "strconv"
@@ -14,9 +15,11 @@ import (
     "github.com/open-cluster-management/insights-client/pkg/config"
     "github.com/open-cluster-management/insights-client/pkg/retriever"
     "github.com/open-cluster-management/insights-client/pkg/types"
-    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-    k8sTypes "k8s.io/apimachinery/pkg/types"
-    "k8s.io/client-go/rest"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime"
+	k8sTypes "k8s.io/apimachinery/pkg/types"
     "sigs.k8s.io/wg-policy-prototypes/policy-report/api/v1alpha2"
 )
 
@@ -38,81 +41,37 @@ type patchPRResultsValue struct {
 type Processor struct {
 }
 
-func findRuleIndex(ruleID string, prResults []types.PolicyReportResultData) (int) {
-    for idx, value := range prResults {
-        if ruleID == value.Properties["component"] {
-            return idx
-        }
-    }
-    return -1    //not found.
- }
-
 // NewProcessor ...
 func NewProcessor() *Processor {
     p := &Processor{}
     return p
 }
 
-// CreateUpdatePolicyReports ...
-func (p *Processor) CreateUpdatePolicyReports(input chan types.ProcessorData, ret *retriever.Retriever, hubID string) {
-    for {
-        data := <-input
-
-        cfg := config.GetConfig()
-        restClient := config.RESTClient(cfg)
-        getResp := restClient.Get().
-            Resource("policyreports").
-            Namespace(data.ClusterInfo.Namespace).
-            Name(data.ClusterInfo.Namespace).
-            Do(context.TODO())
-    
-        respBytes, _ := getResp.Raw()
-        var prResponse types.PolicyReportGetResponse
-        unmarshalError := json.Unmarshal(respBytes, &prResponse)
-        if unmarshalError != nil {
-            glog.Infof(
-                "Error unmarshalling PolicyReport for cluster %s: %v",
-                data.ClusterInfo.Namespace,
-                unmarshalError,
-            )
-        } else {
-            // Create a PolicyReport for the cluster
-            createPolicyReport(restClient, data.Reports.Reports, prResponse, data.ClusterInfo, ret, hubID)
-
-            if len(prResponse.Results) > 0 {
-                // Update any existing PolicyReports that have been resolved
-                updateViolationSkips(restClient, data.Reports.Skips, prResponse, data.ClusterInfo.Namespace)
-            }
+func findRuleIndex(ruleID string, prResults []*v1alpha2.PolicyReportResult) (int) {
+    for idx, value := range prResults {
+        if ruleID == value.Properties["component"] {
+            return idx
         }
     }
+    return -1    //not found.
 }
 
-// createPolicyReport ...
-func createPolicyReport(
-    restClient *rest.RESTClient,
-    reports []types.ReportData,
-    prResponse types.PolicyReportGetResponse,
+func getPolicyReportResults(
+	reports []types.ReportData,
+    prResponse v1alpha2.PolicyReport,
     clusterInfo types.ManagedClusterInfo,
-    ret *retriever.Retriever,
-    hubID string,
-) {
-    var policyReportResults []*v1alpha2.PolicyReportResult
+) ([]*v1alpha2.PolicyReportResult) {
+	var newPolicyReportViolations []*v1alpha2.PolicyReportResult
     for _, report := range reports {
         // Find the correct Insight content data from cache
-        reportData := retriever.ContentsMap[report.Key]
+		reportData := retriever.ContentsMap[report.Key]
         ruleIndex := findRuleIndex(report.Component, prResponse.Results)
-        if (reportData == nil) {
-            glog.Infof(
-                "Could not find the content data for rule %s - Refreshing content list",
-                report.Component,
-            )
-            ret.InitializeContents(hubID)
-        } else if reportData != nil && ruleIndex == -1 {
+        if reportData != nil && ruleIndex == -1 {
             var contentData types.FormattedContentData
             reportDataBytes, _ := json.Marshal(reportData)
             unmarshalError := json.Unmarshal(reportDataBytes, &contentData)
             if unmarshalError == nil {
-                policyReportResults = append(policyReportResults, &v1alpha2.PolicyReportResult{
+                newPolicyReportViolations = append(newPolicyReportViolations, &v1alpha2.PolicyReportResult{
                     Policy:      report.Key,
                     Description: contentData.Description,
                     Scored:      false,
@@ -125,129 +84,221 @@ func createPolicyReport(
                         "created_at": contentData.Publish_date,
                         // *** total_risk is not currently included in content data, but being added by CCX team.
                         "total_risk": strconv.Itoa(contentData.Likelihood),
-                        "reason":     contentData.Reason, // Need to figure out where to store this value outside of the PR
-                        "resolution": contentData.Resolution, // Need to figure out where to store this value outside of the PR
-                        "component":  report.Component,
+						"component":  report.Component,
+						// Need to store extra data here for templating changes in UI
                     },
-                })
+				})
             } else {
                 glog.Infof(
                     "Error unmarshalling Report %v for cluster %s (%s)",
                     unmarshalError,
                     clusterInfo.Namespace,
                     clusterInfo.ClusterID,
-                )
+				)
             }
         }
-    }
+	}
+	return newPolicyReportViolations
+}
 
-    if prResponse.Meta.Name == "" {
-        // PolicyReport doesnt exist for cluster - creating
-        policyreport := &v1alpha2.PolicyReport{
-            ObjectMeta: metav1.ObjectMeta{
-                Name:      clusterInfo.Namespace,
-                Namespace: clusterInfo.Namespace,
-            },
-            Results: policyReportResults,
-        }
+// CreateUpdatePolicyReports ...
+func (p *Processor) CreateUpdatePolicyReports(input chan types.ProcessorData) {
+    for {
+        data := <-input
 
-        postResp := restClient.Post().
-            Resource("policyreports").
-            Namespace(clusterInfo.Namespace).
-            Body(policyreport).
-            Do(context.TODO())
+		var prResponse v1alpha2.PolicyReport
+		var policyReportGvr = schema.GroupVersionResource{
+			Group:    "wgpolicyk8s.io",
+			Version:  "v1alpha2",
+			Resource: "policyreports",
+		}
+        dynamicClient := config.GetDynamicClient()
+		policyReportRes, _ := dynamicClient.Resource(policyReportGvr).Namespace(data.ClusterInfo.Namespace).Get(
+			context.TODO(),
+			data.ClusterInfo.Namespace,
+			metav1.GetOptions{},
+		)
 
-        if postResp.Error() != nil {
-            glog.Infof(
-                "Error creating PolicyReport for cluster %s (%s): %v",
-                clusterInfo.Namespace,
-                clusterInfo.ClusterID,
-                postResp.Error(),
-            )
-        } else {
-            glog.Infof(
-                "Successfully created PolicyReport for cluster %s (%s)",
-                clusterInfo.Namespace,
-                clusterInfo.ClusterID,
-            )
-        }
-    } else if prResponse.Meta.Name != "" && len(policyReportResults) > 0 {
-        // PolicyReport exists on cluster - Updating the rule violations
-        payload := []patchPRResultsValue{{
-            Op:    "replace",
-            Path:  "/results",
-            Value: policyReportResults,
-        }}
-        payloadBytes, _ := json.Marshal(payload)
-
-        resp := restClient.Patch(k8sTypes.JSONPatchType).
-            Resource("policyreports").
-            Namespace(clusterInfo.Namespace).
-            Name(clusterInfo.Namespace).
-            Body(payloadBytes).
-            Do(context.TODO())
-
-        if resp.Error() != nil {
-            glog.Infof(
-                "Error updating PolicyReport data for cluster %s (%s): %v",
-                clusterInfo.Namespace,
-                clusterInfo.ClusterID,
-                resp.Error(),
-            )
-        } else {
-            glog.Infof(
-                "Successfully updated PolicyReport data for cluster %s (%s)",
-                clusterInfo.Namespace,
-                clusterInfo.ClusterID,
-            )
-        }
+		if policyReportRes != nil {
+			unstructConvErr := runtime.DefaultUnstructuredConverter.FromUnstructured(policyReportRes.UnstructuredContent(), &prResponse)
+			if unstructConvErr != nil {
+				glog.Warningf("Error unstructuring PolicyReport for cluster: %s", data.ClusterInfo.Namespace)
+				return
+			}
+		}
+		newPolicyReportViolations := getPolicyReportResults(
+			data.Reports.Reports,
+			prResponse,
+			data.ClusterInfo,
+		)
+		if prResponse.GetName() == "" {
+			// If the PolicyReport does not exist on the cluster create it
+			createPolicyReport(newPolicyReportViolations, data.ClusterInfo)
+		} else if prResponse.GetName() != "" {
+			// If the PolicyReport exists need to update the results if there are new violations
+			addPolicyReportViolations(newPolicyReportViolations, prResponse, data.Reports.Skips, data.ClusterInfo)
+			// Update any existing PolicyReport violations that have been resolved
+			updatePolicyReportResultStatus(data.Reports.Skips, prResponse, data.ClusterInfo)
+		}
     }
 }
 
-// updateViolationSkips - Updates status to "skip" for all violations that have been resolved
-func updateViolationSkips(
-    restClient *rest.RESTClient,
-    skippedReports []types.SkippedReports,
-    prResponse types.PolicyReportGetResponse,
-    clusterNamespace string,
+func createPolicyReport(
+    newPolicyReportViolations []*v1alpha2.PolicyReportResult,
+    clusterInfo types.ManagedClusterInfo,
 ) {
-    var payload []patchStringValue
-    // Find any rules that are now resolved
-    for _, rule := range skippedReports {
-        for idx, resultRule := range prResponse.Results {
-            if prResponse.Meta.Name != "" && resultRule.Status != "skip" && rule.RuleID == resultRule.Properties["component"] {
-                glog.Infof("PolicyReport violation %s has been resolved, updating status to skip", rule.RuleID)
-                payload = append(payload, patchStringValue{
-                    Op:    "replace",
-                    Path:  "/results/" + strconv.Itoa(idx) + "/result",
-                    Value: "skip",
-                })
-            }
-        }
-    }
+	if newPolicyReportViolations != nil {
+		// PolicyReport doesnt exist for cluster - creating
+		policyreport := &v1alpha2.PolicyReport{
+			TypeMeta: metav1.TypeMeta{
+				Kind: "PolicyReport",
+				APIVersion: "wgpolicyk8s.io/v1alpha2",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      clusterInfo.Namespace,
+				Namespace: clusterInfo.Namespace,
+			},
+			Results: newPolicyReportViolations,
+		}
+		prUnstructured, unstructuredErr := runtime.DefaultUnstructuredConverter.ToUnstructured(policyreport)
+		if unstructuredErr != nil {
+			glog.Warningf("Error converting to unstructured.Unstructured: %s", unstructuredErr)
+		}
+		obj := &unstructured.Unstructured{Object: prUnstructured}
 
-    if len(payload) > 0 {
-        payloadBytes, _ := json.Marshal(payload)
-        resp := restClient.Patch(k8sTypes.JSONPatchType).
-            Resource("policyreports").
-            Namespace(clusterNamespace).
-            Name(clusterNamespace).
-            Body(payloadBytes).
-            Do(context.TODO())
+		var policyReportGvr = schema.GroupVersionResource{
+			Group:    "wgpolicyk8s.io",
+			Version:  "v1alpha2",
+			Resource: "policyreports",
+		}
+		dynamicClient := config.GetDynamicClient()
+		_, err := dynamicClient.Resource(policyReportGvr).Namespace(clusterInfo.Namespace).Create(context.TODO(), obj, metav1.CreateOptions{})
 
-        if resp.Error() != nil {
-            glog.Infof(
-                "Error updating PolicyReport statuses for cluster %s: %v",
-                clusterNamespace,
-                resp.Error(),
-            )
-        } else {
-            glog.Infof(
-                "Successfully updated PolicyReport statuses for cluster %s",
-                clusterNamespace,
-            )
-        }
-    }
+		if err != nil {
+			glog.Infof(
+				"Error creating PolicyReport for cluster %s (%s): %v",
+				clusterInfo.Namespace,
+				clusterInfo.ClusterID,
+				err,
+			)
+		} else {
+			glog.Infof(
+				"Successfully created PolicyReport for cluster %s (%s)",
+				clusterInfo.Namespace,
+				clusterInfo.ClusterID,
+			)
+		}
+	}
 }
 
+func addPolicyReportViolations(
+	newPolicyReportViolations []*v1alpha2.PolicyReportResult,
+	prResponse v1alpha2.PolicyReport,
+	skippedReports []types.SkippedReports,
+    clusterInfo types.ManagedClusterInfo,
+) {
+	// PolicyReport exists on cluster - Adding rule violations
+	if len(newPolicyReportViolations) > 0 {
+		// merge existing PolicyReport results with new results
+		prResponse.Results = append(prResponse.Results, newPolicyReportViolations...)
+		prResponse.SetManagedFields(nil)
+		data, marshalErr := json.Marshal(prResponse)
+		if marshalErr != nil {
+			glog.Warningf("Error Marshalling PolicyReport patch object for cluster %s: %v", clusterInfo.Namespace, marshalErr)
+		}
+		var policyReportGvr = schema.GroupVersionResource{
+			Group:    "wgpolicyk8s.io",
+			Version:  "v1alpha2",
+			Resource: "policyreports",
+		}
+		dynamicClient := config.GetDynamicClient()
+		forcePatch := true
+		_, err := dynamicClient.Resource(policyReportGvr).Namespace(clusterInfo.Namespace).Patch(
+			context.TODO(),
+			clusterInfo.Namespace,
+			k8sTypes.ApplyPatchType,
+			data,
+			metav1.PatchOptions{
+				FieldManager: "insights-client",
+				Force: &forcePatch,
+			},
+		)
 
+		if err != nil {
+			glog.Infof(
+				"Error adding PolicyReport violations for cluster %s (%s): %v",
+				clusterInfo.Namespace,
+				clusterInfo.ClusterID,
+				err,
+			)
+		} else {
+			glog.Infof(
+				"Successfully added PolicyReport violations for cluster %s (%s)",
+				clusterInfo.Namespace,
+				clusterInfo.ClusterID,
+			)
+		}
+	}
+}
+
+// updatePolicyReportResultStatus - Updates status to "skip" for all violations that have been resolved
+func updatePolicyReportResultStatus(
+    skippedReports []types.SkippedReports,
+    prResponse v1alpha2.PolicyReport,
+    clusterInfo types.ManagedClusterInfo,
+) {
+	// Only update statuses if the PolicyReport has > 0 violations
+	if len(prResponse.Results) > 0 {
+		isUpdatedStatuses := false
+		// Update status of all resolved vilations from error to skip
+		for _, rule := range skippedReports {
+			for idx, resultRule := range prResponse.Results {
+				if prResponse.GetName() != "" && resultRule.Result != "skip" && rule.RuleID == resultRule.Properties["component"] {
+					glog.Infof("PolicyReport violation %s has been resolved, updating status to skip", rule.RuleID)
+					prResponse.Results[idx].Result = "skip"
+					isUpdatedStatuses = true
+				}
+			}
+		}
+		// Apply patch only if there are violations that have been resolved
+		if isUpdatedStatuses {
+			prResponse.SetManagedFields(nil)
+			data, marshalErr := json.Marshal(prResponse)
+			if marshalErr != nil {
+				glog.Warningf("Error Marshalling PolicyReport patch object for cluster %s: %v", clusterInfo.Namespace, marshalErr)
+			}
+			var policyReportGvr = schema.GroupVersionResource{
+				Group:    "wgpolicyk8s.io",
+				Version:  "v1alpha2",
+				Resource: "policyreports",
+			}
+			dynamicClient := config.GetDynamicClient()
+			forcePatch := true
+			_, err := dynamicClient.Resource(policyReportGvr).Namespace(clusterInfo.Namespace).Patch(
+				context.TODO(),
+				clusterInfo.Namespace,
+				k8sTypes.ApplyPatchType,
+				data,
+				metav1.PatchOptions{
+					FieldManager: "insights-client",
+					Force: &forcePatch,
+				},
+			)
+
+			if err != nil {
+				glog.Infof(
+					"Error updating PolicyReport statuses for cluster %s (%s): %v",
+					clusterInfo.Namespace,
+					clusterInfo.ClusterID,
+					err,
+				)
+			} else {
+				glog.Infof(
+					"Successfully updated PolicyReport statuses for cluster %s (%s)",
+					clusterInfo.Namespace,
+					clusterInfo.ClusterID,
+				)
+			}
+		}
+	}
+}
