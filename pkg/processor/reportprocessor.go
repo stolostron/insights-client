@@ -41,6 +41,12 @@ type patchPRResultsValue struct {
 type Processor struct {
 }
 
+var policyReportGvr = schema.GroupVersionResource{
+	Group:    "wgpolicyk8s.io",
+	Version:  "v1alpha2",
+	Resource: "policyreports",
+}
+
 // NewProcessor ...
 func NewProcessor() *Processor {
     p := &Processor{}
@@ -107,11 +113,6 @@ func (p *Processor) CreateUpdatePolicyReports(input chan types.ProcessorData) {
         data := <-input
 
 		var prResponse v1alpha2.PolicyReport
-		var policyReportGvr = schema.GroupVersionResource{
-			Group:    "wgpolicyk8s.io",
-			Version:  "v1alpha2",
-			Resource: "policyreports",
-		}
         dynamicClient := config.GetDynamicClient()
 		policyReportRes, _ := dynamicClient.Resource(policyReportGvr).Namespace(data.ClusterInfo.Namespace).Get(
 			context.TODO(),
@@ -136,7 +137,7 @@ func (p *Processor) CreateUpdatePolicyReports(input chan types.ProcessorData) {
 			createPolicyReport(newPolicyReportViolations, data.ClusterInfo)
 		} else if prResponse.GetName() != "" {
 			// If the PolicyReport exists need to update the results if there are new violations
-			addPolicyReportViolations(newPolicyReportViolations, prResponse, data.Reports.Skips, data.ClusterInfo)
+			addPolicyReportViolations(newPolicyReportViolations, prResponse, data.ClusterInfo)
 			// Update any existing PolicyReport violations that have been resolved
 			updatePolicyReportResultStatus(data.Reports.Skips, prResponse, data.ClusterInfo)
 		}
@@ -166,11 +167,6 @@ func createPolicyReport(
 		}
 		obj := &unstructured.Unstructured{Object: prUnstructured}
 
-		var policyReportGvr = schema.GroupVersionResource{
-			Group:    "wgpolicyk8s.io",
-			Version:  "v1alpha2",
-			Resource: "policyreports",
-		}
 		dynamicClient := config.GetDynamicClient()
 		_, err := dynamicClient.Resource(policyReportGvr).Namespace(clusterInfo.Namespace).Create(context.TODO(), obj, metav1.CreateOptions{})
 
@@ -194,7 +190,6 @@ func createPolicyReport(
 func addPolicyReportViolations(
 	newPolicyReportViolations []*v1alpha2.PolicyReportResult,
 	prResponse v1alpha2.PolicyReport,
-	skippedReports []types.SkippedReports,
     clusterInfo types.ManagedClusterInfo,
 ) {
 	// PolicyReport exists on cluster - Adding rule violations
@@ -205,12 +200,9 @@ func addPolicyReportViolations(
 		data, marshalErr := json.Marshal(prResponse)
 		if marshalErr != nil {
 			glog.Warningf("Error Marshalling PolicyReport patch object for cluster %s: %v", clusterInfo.Namespace, marshalErr)
+			return
 		}
-		var policyReportGvr = schema.GroupVersionResource{
-			Group:    "wgpolicyk8s.io",
-			Version:  "v1alpha2",
-			Resource: "policyreports",
-		}
+
 		dynamicClient := config.GetDynamicClient()
 		forcePatch := true
 		_, err := dynamicClient.Resource(policyReportGvr).Namespace(clusterInfo.Namespace).Patch(
@@ -253,7 +245,7 @@ func updatePolicyReportResultStatus(
 		// Update status of all resolved vilations from error to skip
 		for _, rule := range skippedReports {
 			for idx, resultRule := range prResponse.Results {
-				if prResponse.GetName() != "" && resultRule.Result != "skip" && rule.RuleID == resultRule.Properties["component"] {
+				if resultRule.Result != "skip" && rule.RuleID == resultRule.Properties["component"] {
 					glog.Infof("PolicyReport violation %s has been resolved, updating status to skip", rule.RuleID)
 					prResponse.Results[idx].Result = "skip"
 					isUpdatedStatuses = true
@@ -267,11 +259,7 @@ func updatePolicyReportResultStatus(
 			if marshalErr != nil {
 				glog.Warningf("Error Marshalling PolicyReport patch object for cluster %s: %v", clusterInfo.Namespace, marshalErr)
 			}
-			var policyReportGvr = schema.GroupVersionResource{
-				Group:    "wgpolicyk8s.io",
-				Version:  "v1alpha2",
-				Resource: "policyreports",
-			}
+
 			dynamicClient := config.GetDynamicClient()
 			forcePatch := true
 			_, err := dynamicClient.Resource(policyReportGvr).Namespace(clusterInfo.Namespace).Patch(
