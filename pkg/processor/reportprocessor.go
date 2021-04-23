@@ -22,20 +22,6 @@ import (
     "sigs.k8s.io/wg-policy-prototypes/policy-report/api/v1alpha2"
 )
 
-//  patchStringValue specifies a patch operation for a uint32.
-type patchStringValue struct {
-    Op    string `json:"op"`
-    Path  string `json:"path"`
-    Value string `json:"value"`
-}
-
-//  patchStringValue specifies a patch operation for a uint32.
-type patchPRResultsValue struct {
-    Op    string                         `json:"op"`
-    Path  string                         `json:"path"`
-    Value []*v1alpha2.PolicyReportResult `json:"value"`
-}
-
 // Processor struct
 type Processor struct {
 }
@@ -143,6 +129,7 @@ func patchRequest(
 	return err
 }
 
+// CreateUpdatePolicyReports - Creates a PolicyReport for cluster if one does not already exist and updates the status of violations
 func (p *Processor) CreateUpdatePolicyReports(input chan types.ProcessorData) {
     for {
         data := <-input
