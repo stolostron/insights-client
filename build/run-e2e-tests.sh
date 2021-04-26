@@ -130,9 +130,10 @@ initial_setup() {
     echo -n "Applying version CR:" && kubectl apply -f ./test-data/e2e/version.yaml
     echo -n "Applying managedclusters CRD:" && kubectl apply -f ./test-data/e2e/managedclusters.yaml
     echo -n "Applying local-cluster managedclusters CR:" && kubectl apply -f ./test-data/e2e/local-clusterCR.yaml
-    helm init
+
     helm upgrade --install insights-client --debug --namespace open-cluster-management --set global.pullSecret=quay-secret ./test-data/stable/insights-chart-2.3.0.tgz
-    pod=(oc get pods | grep insights-client | cut -d' ' -f1)
+    sleep 100s
+	pod=$(oc get pods | grep insights-client | cut -d' ' -f1)
 	oc logs $pod
 	echo "s~$IMAGE_NAME~{{ INSIGHTS_CLIENT_IMAGE }}~g"
 
