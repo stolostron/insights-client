@@ -1,0 +1,94 @@
+# Copyright (c) 2021 Red Hat, Inc.
+# Copyright Contributors to the Open Cluster Management project
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "insights.fullname" . }}-insights-client
+  labels:
+    app: {{ template "insights.name" . }}
+    chart: {{ template "insights.chart" . }}
+    component: "insights-client"
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ template "insights.name" . }}
+      component: "insights-client"
+      release: {{ .Release.Name }}
+      heritage: {{ .Release.Service }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "insights.name" . }}
+        ocm-antiaffinity-selector: "insightsclient"
+        component: "insights-client"
+        release: {{ .Release.Name }}
+        chart: {{ template "insights.chart" . }}
+        heritage: {{ .Release.Service }}
+    spec:
+      serviceAccountName: insights-client
+      securityContext:
+          runAsNonRoot: true
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: beta.kubernetes.io/arch
+                operator: In
+                values:
+                {{- range .Values.global.arch }}
+                - {{ . }}
+                {{- end }}
+        {{- with .Values.client.affinity.podAntiAffinity }}
+        podAntiAffinity: 
+{{ toYaml . | indent 10 }}
+        {{- end }}
+      tolerations:
+        - key: dedicated
+          operator: Exists
+          effect: NoSchedule
+        - effect: NoSchedule 
+          key: node-role.kubernetes.io/infra 
+          operator: Exists
+      containers:
+      - name: client
+        image: {{ .Values.global.imageOverrides.insights_client }}
+        imagePullPolicy: {{ .Values.global.pullPolicy }}
+        securityContext:
+          privileged: false
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        env:
+        - name: USE_MOCK 
+          value: "false"
+        - name: CCX_TOKEN
+          value: "Basic eGRoYXJtYWlAcmVkaGF0LmNvbTppbmZhbjI0SkBz"  
+        - name: CCX_SERVER
+          value: "https://qaprodauth.cloud.redhat.com/api/insights-results-aggregator/v1"
+        resources:
+{{ toYaml .Values.insights.client.resources | indent 10 }}
+        volumeMounts:
+        - name: insights-client-certs
+          mountPath: /sslcert
+      {{- if .Values.global.pullSecret }}
+      imagePullSecrets:
+      - name: {{ .Values.global.pullSecret }}
+      {{- end }}
+      volumes:
+      - name: insights-client-certs
+        secret:
+          secretName: insights-client-certs
+      hostIPC: false
+      hostNetwork: false
+      hostPID: false
+      {{- with .Values.hubconfig.nodeSelector }}
+      nodeSelector:
+      {{ toYaml . | indent 8 }}
+      {{- end }}

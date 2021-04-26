@@ -1,0 +1,56 @@
+# Copyright (c) 2021 Red Hat, Inc.
+# Copyright Contributors to the Open Cluster Management project
+
+org: open-cluster-management
+
+global:
+  pullPolicy: Always
+  pullSecret: null
+  arch:
+  - amd64
+  - ppc64le
+  - s390x
+  certificateAuthority:
+    issuer: multicloud-ca-issuer
+    kind: Issuer
+  imageOverrides:
+    insights_client: quay.io/open-cluster-management/insights-client:2.3.0-d006fd6dd06ab557277745358f2ea360a219ab46
+
+ocpingress: ""
+    
+hubconfig:
+  nodeSelector: null
+  replicaCount: 1
+
+client:
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 70
+        podAffinityTerm:
+          topologyKey: topology.kubernetes.io/zone
+          labelSelector:
+            matchExpressions:
+            - key: ocm-antiaffinity-selector
+              operator: In
+              values:
+              - insightsclient 
+      - weight: 35
+        podAffinityTerm:
+          topologyKey: kubernetes.io/hostname
+          labelSelector:
+            matchExpressions:
+            - key: ocm-antiaffinity-selector
+              operator: In
+              values:
+              - insightsclient 
+
+insights:
+  name: insights
+  client:
+    resources:
+      requests:
+        memory: "32Mi"
+        cpu: "25m"
+      limits:
+        memory: "512Mi"
