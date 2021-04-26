@@ -116,11 +116,12 @@ initial_setup() {
     helm package  ./test-data/e2e/insights-chart -d ./test-data/stable
     
     echo "=====Initial setup for tests====="
-	echo -n "Switch to namespace: " && kubectl config set-context --current --namespace open-cluster-management
+	
 
 	echo "Current directory"
 	echo $(pwd)
 	echo -n "Create namespace open-cluster-management-monitoring: " && kubectl create namespace open-cluster-management
+	echo -n "Switch to namespace: " && kubectl config set-context --current --namespace open-cluster-management
     echo -n "Creating pull secret: " && kubectl create secret docker-registry search-operator-pull-secret --docker-server=quay.io --docker-username=$DOCKER_USER --docker-password=$DOCKER_PASS
 
     #create dummy ssl certs for service 
@@ -129,9 +130,12 @@ initial_setup() {
     echo -n "Applying version CR:" && kubectl apply -f ./test-data/e2e/version.yaml
     echo -n "Applying managedclusters CRD:" && kubectl apply -f ./test-data/e2e/managedclusters.yaml
     echo -n "Applying local-cluster managedclusters CR:" && kubectl apply -f ./test-data/e2e/local-clusterCR.yaml
-  
-    helm upgrade --install insights-client --namespace open-cluster-management --set global.pullSecret=quay-secret ./test-data/stable/insights-chart-2.3.0.tgz
-    echo "s~$IMAGE_NAME~{{ INSIGHTS_CLIENT_IMAGE }}~g"
+    helm init
+    helm upgrade --install insights-client --debug --namespace open-cluster-management --set global.pullSecret=quay-secret ./test-data/stable/insights-chart-2.3.0.tgz
+    pod=(oc get pods | grep insights-client | cut -d' ' -f1)
+	oc logs $pod
+	echo "s~$IMAGE_NAME~{{ INSIGHTS_CLIENT_IMAGE }}~g"
+
 	
     # # change the image name back to INSIGHTS_CLIENT_IMAGE in operator deployment for next run
 	#sed -i '-e' "s~$IMAGE_NAME~{{ INSIGHTS_CLIENT_IMAGE }}~g" ./test-data/e2e/insights-chart/values.yaml
