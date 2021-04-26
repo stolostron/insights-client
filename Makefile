@@ -54,3 +54,8 @@ clean::
 # Build the docker image
 docker-build: 
 	docker build -f Dockerfile . -t $(shell cat COMPONENT_NAME)
+
+e2e-tests:
+	@echo "Run e2e-tests"
+	./build/run-e2e-tests.sh
+
