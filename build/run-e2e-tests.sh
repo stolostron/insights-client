@@ -116,7 +116,8 @@ initial_setup() {
     echo -n "Creating pull secret: " && kubectl create secret docker-registry search-operator-pull-secret --docker-server=quay.io --docker-username=$DOCKER_USER --docker-password=$DOCKER_PASS
 
     #create dummy ssl certs for service 
-    kubectl create secret generic insights-client-certs --from-file=./test-data/e2e/insights-chart/tls.crt --from-file=./test-data/e2e/insights-chart/tls.key
+	./setup.sh
+    kubectl create secret generic insights-client-certs --from-file=./sslcert/tls.crt --from-file=./sslcert/tls.key
     echo -n "Applying cluster versions CRD:" && kubectl apply -f ./test-data/e2e/clusterversions.config.openshift.io.yaml
     echo -n "Applying version CR:" && kubectl apply -f ./test-data/e2e/version.yaml
     echo -n "Applying managedclusters CRD:" && kubectl apply -f ./test-data/e2e/managedclusters.yaml
