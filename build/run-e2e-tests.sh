@@ -104,7 +104,7 @@ delete_command_binaries(){
 }
 
 initial_setup() {
-        echo $WORKDIR
+    echo $WORKDIR
     echo "=====Deploying insights-client====="
 	$sed_command "s~{{ INSIGHTS_CLIENT_IMAGE }}~$IMAGE_NAME~g" ./test-data/e2e/insights-chart/templates/insights-deployment.yaml
 	$sed_command "s~{{ INSIGHTS_CLIENT_CCX_TOKEN }}~$INSIGHTS_CLIENT_CCX_TOKEN~g" ./test-data/e2e/insights-chart/templates/insights-deployment.yaml
@@ -124,6 +124,7 @@ initial_setup() {
     echo -n "Applying local-cluster managedclusters CR:" && kubectl apply -f ./test-data/e2e/local-clusterCR.yaml
 
     echo -n "Installing Insights client deployment :" && kubectl apply -f ./test-data/e2e/insights-chart/templates
+	cat ./test-data/e2e/insights-chart/templates/insights-deployment.yaml
     sleep 100s
 	
 
