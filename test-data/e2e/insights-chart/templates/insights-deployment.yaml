@@ -1,33 +1,34 @@
+# Source: insights-chart/templates/insights-deployment.yaml
 # Copyright (c) 2021 Red Hat, Inc.
 # Copyright Contributors to the Open Cluster Management project
 
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ template "insights.fullname" . }}-insights-client
+  name: insights-client-insights-client
   labels:
-    app: {{ template "insights.name" . }}
-    chart: {{ template "insights.chart" . }}
+    app: insights-chart
+    chart: insights-chart-2.3.0
     component: "insights-client"
-    release: {{ .Release.Name }}
-    heritage: {{ .Release.Service }}
+    release: insights-client
+    heritage: Helm
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: {{ template "insights.name" . }}
+      app: insights-chart
       component: "insights-client"
-      release: {{ .Release.Name }}
-      heritage: {{ .Release.Service }}
+      release: insights-client
+      heritage: Helm
   template:
     metadata:
       labels:
-        app: {{ template "insights.name" . }}
+        app: insights-chart
         ocm-antiaffinity-selector: "insightsclient"
         component: "insights-client"
-        release: {{ .Release.Name }}
-        chart: {{ template "insights.chart" . }}
-        heritage: {{ .Release.Service }}
+        release: insights-client
+        chart: insights-chart-2.3.0
+        heritage: Helm
     spec:
       serviceAccountName: insights-client
       securityContext:
@@ -40,13 +41,29 @@ spec:
               - key: beta.kubernetes.io/arch
                 operator: In
                 values:
-                {{- range .Values.global.arch }}
-                - {{ . }}
-                {{- end }}
-        {{- with .Values.client.affinity.podAntiAffinity }}
+                - amd64
+                - ppc64le
+                - s390x
         podAntiAffinity: 
-{{ toYaml . | indent 10 }}
-        {{- end }}
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: ocm-antiaffinity-selector
+                  operator: In
+                  values:
+                  - insightsclient
+              topologyKey: topology.kubernetes.io/zone
+            weight: 70
+          - podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: ocm-antiaffinity-selector
+                  operator: In
+                  values:
+                  - insightsclient
+              topologyKey: kubernetes.io/hostname
+            weight: 35
       tolerations:
         - key: dedicated
           operator: Exists
@@ -56,8 +73,8 @@ spec:
           operator: Exists
       containers:
       - name: client
-        image: {{ .Values.global.imageOverrides.insights_client }}
-        imagePullPolicy: {{ .Values.global.pullPolicy }}
+        image: quay.io/open-cluster-management/insights-client:2.3.0-d006fd6dd06ab557277745358f2ea360a219ab46
+        imagePullPolicy: Always
         securityContext:
           privileged: false
           readOnlyRootFilesystem: true
@@ -73,14 +90,16 @@ spec:
         - name: CCX_SERVER
           value: "https://qaprodauth.cloud.redhat.com/api/insights-results-aggregator/v1"
         resources:
-{{ toYaml .Values.insights.client.resources | indent 10 }}
+          limits:
+            memory: 512Mi
+          requests:
+            cpu: 25m
+            memory: 32Mi
         volumeMounts:
         - name: insights-client-certs
           mountPath: /sslcert
-      {{- if .Values.global.pullSecret }}
       imagePullSecrets:
-      - name: {{ .Values.global.pullSecret }}
-      {{- end }}
+      - name: quay-secret
       volumes:
       - name: insights-client-certs
         secret:
@@ -88,7 +107,3 @@ spec:
       hostIPC: false
       hostNetwork: false
       hostPID: false
-      {{- with .Values.hubconfig.nodeSelector }}
-      nodeSelector:
-      {{ toYaml . | indent 8 }}
-      {{- end }}

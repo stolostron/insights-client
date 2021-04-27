@@ -1,16 +1,17 @@
+# Source: insights-chart/templates/insights-role.yaml
 # Copyright (c) 2021 Red Hat, Inc.
 # Copyright Contributors to the Open Cluster Management project
 
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ .Values.org }}:{{ .Release.Name }}:insights-client
+  name: open-cluster-management:insights-client:insights-client
   labels:
-    app: {{ .Values.insights.name }}
-    chart: {{.Chart.Name}}-{{.Chart.Version}}
+    app: insights
+    chart: insights-chart-2.3.0
     component: insights-client
-    release: {{ .Release.Name }}
-    heritage: {{ .Release.Service }}
+    release: insights-client
+    heritage: Helm
 rules:
 - apiGroups:
   - wgpolicyk8s.io

@@ -109,11 +109,8 @@ delete_command_binaries(){
 initial_setup() {
         echo $WORKDIR
     echo "=====Deploying insights-client====="
-	$sed_command "s~{{ INSIGHTS_CLIENT_IMAGE }}~$IMAGE_NAME~g" ./test-data/e2e/insights-chart/values.yaml
+	$sed_command "s~{{ INSIGHTS_CLIENT_IMAGE }}~$IMAGE_NAME~g" ./test-data/e2e/insights-chart/templates/insights-deployment.yaml
 
-
-
-    helm package  ./test-data/e2e/insights-chart -d ./test-data/stable
     
     echo "=====Initial setup for tests====="
 	
@@ -131,7 +128,7 @@ initial_setup() {
     echo -n "Applying managedclusters CRD:" && kubectl apply -f ./test-data/e2e/managedclusters.yaml
     echo -n "Applying local-cluster managedclusters CR:" && kubectl apply -f ./test-data/e2e/local-clusterCR.yaml
 
-    helm upgrade --install insights-client --debug --namespace open-cluster-management --set global.pullSecret=quay-secret ./test-data/stable/insights-chart-2.3.0.tgz
+    echo -n "Installing Insights client deployment :" && kubectl apply -f ./test-data/e2e/insights-chart/templates
     sleep 100s
 	pod=$(oc get pods | grep insights-client | cut -d' ' -f1)
 	oc logs $pod
