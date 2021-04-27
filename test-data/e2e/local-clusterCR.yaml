@@ -1,0 +1,140 @@
+apiVersion: cluster.open-cluster-management.io/v1
+kind: ManagedCluster
+metadata:
+  creationTimestamp: "2021-04-22T19:57:31Z"
+  finalizers:
+  - managedclusterinfo.finalizers.open-cluster-management.io
+  - cluster.open-cluster-management.io/api-resource-cleanup
+  - open-cluster-management.io/managedclusterrole
+  - managedcluster-import-controller.open-cluster-management.io/cleanup
+  - agent.open-cluster-management.io/klusterletaddonconfig-cleanup
+  generation: 1
+  labels:
+    cloud: Amazon
+    clusterID: 69365d80-c4ef-4999-8417-f14c8e2892c2
+    installer.name: multiclusterhub
+    installer.namespace: open-cluster-management
+    local-cluster: "true"
+    name: local-cluster
+    vendor: OpenShift
+  managedFields:
+  - apiVersion: cluster.open-cluster-management.io/v1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:labels:
+          .: {}
+          f:installer.name: {}
+          f:installer.namespace: {}
+          f:local-cluster: {}
+      f:spec:
+        .: {}
+        f:hubAcceptsClient: {}
+    manager: multiclusterhub-operator
+    operation: Update
+    time: "2021-04-22T19:57:31Z"
+  - apiVersion: cluster.open-cluster-management.io/v1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:finalizers: {}
+    manager: klusterlet-addon-controller
+    operation: Update
+    time: "2021-04-22T19:57:33Z"
+  - apiVersion: cluster.open-cluster-management.io/v1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:labels:
+          f:name: {}
+    manager: rcm-controller
+    operation: Update
+    time: "2021-04-22T19:57:36Z"
+  - apiVersion: cluster.open-cluster-management.io/v1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:status:
+        .: {}
+        f:allocatable:
+          .: {}
+          f:cpu: {}
+          f:memory: {}
+        f:capacity:
+          .: {}
+          f:cpu: {}
+          f:memory: {}
+        f:clusterClaims: {}
+        f:conditions: {}
+        f:version:
+          .: {}
+          f:kubernetes: {}
+    manager: registration
+    operation: Update
+    time: "2021-04-22T19:59:55Z"
+  - apiVersion: cluster.open-cluster-management.io/v1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:labels:
+          f:cloud: {}
+          f:clusterID: {}
+          f:vendor: {}
+    manager: controller
+    operation: Update
+    time: "2021-04-22T19:59:57Z"
+  name: local-cluster
+  resourceVersion: "152615"
+  selfLink: /apis/cluster.open-cluster-management.io/v1/managedclusters/local-cluster
+  uid: 7b3d59f8-a29e-4c9d-a68a-d9b2da31c987
+spec:
+  hubAcceptsClient: true
+  leaseDurationSeconds: 60
+status:
+  allocatable:
+    cpu: "21"
+    memory: 86953Mi
+  capacity:
+    cpu: "24"
+    memory: 93697Mi
+  clusterClaims:
+  - name: id.k8s.io
+    value: local-cluster
+  - name: kubeversion.open-cluster-management.io
+    value: v1.20.0+bd9e442
+  - name: platform.open-cluster-management.io
+    value: AWS
+  - name: product.open-cluster-management.io
+    value: OpenShift
+  - name: consoleurl.cluster.open-cluster-management.io
+    value: https://console-openshift-console.apps.aws-470-lxcqw.dev07.red-chesterfield.com
+  - name: id.openshift.io
+    value: 69365d80-c4ef-4999-8417-f14c8e2892c2
+  - name: infrastructure.openshift.io
+    value: '{"infraName":"aws-470-lxcqw-p5zp8"}'
+  - name: region.open-cluster-management.io
+    value: us-east-1
+  - name: version.openshift.io
+    value: 4.7.0
+  conditions:
+  - lastTransitionTime: "2021-04-22T19:57:31Z"
+    message: Accepted by hub cluster admin
+    reason: HubClusterAdminAccepted
+    status: "True"
+    type: HubAcceptedManagedCluster
+  - lastTransitionTime: "2021-04-22T19:57:36Z"
+    message: Import succeeded
+    reason: ManagedClusterImported
+    status: "True"
+    type: ManagedClusterImportSucceeded
+  - lastTransitionTime: "2021-04-22T19:57:47Z"
+    message: Managed cluster joined
+    reason: ManagedClusterJoined
+    status: "True"
+    type: ManagedClusterJoined
+  - lastTransitionTime: "2021-04-22T19:57:47Z"
+    message: Managed cluster is available
+    reason: ManagedClusterAvailable
+    status: "True"
+    type: ManagedClusterConditionAvailable
+  version:
+    kubernetes: v1.20.0+bd9e442

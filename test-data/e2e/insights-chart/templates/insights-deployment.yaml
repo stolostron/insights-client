@@ -1,0 +1,109 @@
+# Source: insights-chart/templates/insights-deployment.yaml
+# Copyright (c) 2021 Red Hat, Inc.
+# Copyright Contributors to the Open Cluster Management project
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: insights-client-insights-client
+  labels:
+    app: insights-chart
+    chart: insights-chart-2.3.0
+    component: "insights-client"
+    release: insights-client
+    heritage: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: insights-chart
+      component: "insights-client"
+      release: insights-client
+      heritage: Helm
+  template:
+    metadata:
+      labels:
+        app: insights-chart
+        ocm-antiaffinity-selector: "insightsclient"
+        component: "insights-client"
+        release: insights-client
+        chart: insights-chart-2.3.0
+        heritage: Helm
+    spec:
+      serviceAccountName: insights-client
+      securityContext:
+          runAsNonRoot: true
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: beta.kubernetes.io/arch
+                operator: In
+                values:
+                - amd64
+                - ppc64le
+                - s390x
+        podAntiAffinity: 
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: ocm-antiaffinity-selector
+                  operator: In
+                  values:
+                  - insightsclient
+              topologyKey: topology.kubernetes.io/zone
+            weight: 70
+          - podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: ocm-antiaffinity-selector
+                  operator: In
+                  values:
+                  - insightsclient
+              topologyKey: kubernetes.io/hostname
+            weight: 35
+      tolerations:
+        - key: dedicated
+          operator: Exists
+          effect: NoSchedule
+        - effect: NoSchedule 
+          key: node-role.kubernetes.io/infra 
+          operator: Exists
+      containers:
+      - name: client
+        image: {{ INSIGHTS_CLIENT_IMAGE }}
+        imagePullPolicy: Always
+        securityContext:
+          privileged: false
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        env:
+        - name: USE_MOCK 
+          value: "false"
+        - name: CCX_TOKEN
+          value: "{{ INSIGHTS_CLIENT_CCX_TOKEN }}"  
+        - name: CCX_SERVER
+          value: "https://cloud.redhat.com/api/insights-results-aggregator/v1"
+        resources:
+          limits:
+            memory: 512Mi
+          requests:
+            cpu: 25m
+            memory: 32Mi
+        volumeMounts:
+        - name: insights-client-certs
+          mountPath: /sslcert
+      imagePullSecrets:
+      - name: quay-secret
+      volumes:
+      - name: insights-client-certs
+        secret:
+          secretName: insights-client-certs
+      hostIPC: false
+      hostNetwork: false
+      hostPID: false

@@ -1,0 +1,16 @@
+# Source: insights-chart/templates/insights-role-binding.yaml
+# Copyright (c) 2021 Red Hat, Inc.
+# Copyright Contributors to the Open Cluster Management project
+
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: open-cluster-management:insights-client:insights-client
+subjects:
+- kind: ServiceAccount
+  name: insights-client
+  namespace: open-cluster-management
+roleRef:
+  kind: ClusterRole
+  name: open-cluster-management:insights-client:insights-client
+  apiGroup: rbac.authorization.k8s.io
