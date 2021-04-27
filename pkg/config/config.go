@@ -51,10 +51,10 @@ func init() {
 
 func setDefault(field *string, env, defaultVal string) {
 	if val := os.Getenv(env); val != "" {
-		glog.Infof(Message, env, val)
+		glog.V(2).Infof(Message, env, val)
 		*field = val
 	} else if *field == "" && defaultVal != "" {
-		glog.Infof("%s not set, using default value: %s", env, defaultVal)
+		glog.V(2).Infof("%s not set, using default value: %s", env, defaultVal)
 		*field = defaultVal
 	}
 }
@@ -68,7 +68,7 @@ func setDefaultInt(field *int, env string, defaultVal int) {
 			glog.Error("Error parsing env [", env, "].  Expected an integer.  Original error: ", err)
 		}
 	} else if *field == 0 && defaultVal != 0 {
-		glog.Infof("No %s from file or environment, using default value: %d", env, defaultVal)
+		glog.V(2).Infof("No %s from file or environment, using default value: %d", env, defaultVal)
 		*field = defaultVal
 	}
 }
@@ -82,7 +82,7 @@ func setDefaultBool(field *bool, env string, defaultVal bool) {
 			glog.Error("Error parsing env [", env, "].  Expected a boolean.  Original error: ", err)
 		}
 	} else {
-		glog.Infof("No %s from file or environment, using default value: %v", env, defaultVal)
+		glog.V(2).Infof("No %s from file or environment, using default value: %v", env, defaultVal)
 		*field = defaultVal
 	}
 }

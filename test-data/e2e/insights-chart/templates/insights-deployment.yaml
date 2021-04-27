@@ -73,7 +73,7 @@ spec:
           operator: Exists
       containers:
       - name: client
-        image: quay.io/open-cluster-management/insights-client:2.3.0-d006fd6dd06ab557277745358f2ea360a219ab46
+        image: {{ INSIGHTS_CLIENT_IMAGE }}
         imagePullPolicy: Always
         securityContext:
           privileged: false
@@ -86,9 +86,9 @@ spec:
         - name: USE_MOCK 
           value: "false"
         - name: CCX_TOKEN
-          value: "Basic eGRoYXJtYWlAcmVkaGF0LmNvbTppbmZhbjI0SkBz"  
+          value: "{{ INSIGHTS_CLIENT_CCX_TOKEN }}"  
         - name: CCX_SERVER
-          value: "https://qaprodauth.cloud.redhat.com/api/insights-results-aggregator/v1"
+          value: "https://cloud.redhat.com/api/insights-results-aggregator/v1"
         resources:
           limits:
             memory: 512Mi

@@ -21,6 +21,8 @@ deploy() {
     setup_kubectl_and_oc_command
 	create_kind_hub
 	initial_setup
+	test_content_and_local_cluster_report
+	swap_back_to_templates
 
 }
 
@@ -43,8 +45,6 @@ setup_kubectl_and_oc_command() {
 		curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.4.14/openshift-client-linux-4.4.14.tar.gz
 		tar xzvf openshift-client-linux-4.4.14.tar.gz  # xzf to quiet logs
 		rm openshift-client-linux-4.4.14.tar.gz
-        curl -fksSL https://storage.googleapis.com/kubernetes-helm/helm-v2.14.1-linux-amd64.tar.gz | sudo tar --strip-components=1 -xvz -C /usr/local/bin/ linux-amd64/helm
-	    helm init --stable-repo-url https://charts.helm.sh/stable -c
     fi
 	# this package has a binary, so:
 
@@ -66,10 +66,7 @@ setup_kubectl_and_oc_command() {
  
 create_kind_hub() { 
     WORKDIR=`pwd`
-
-
     if [[ ! -f /usr/local/bin/kind ]]; then
-    
     	echo "=====Create kind cluster=====" 
     	echo "Install kind from (https://kind.sigs.k8s.io/)."
     
@@ -110,11 +107,8 @@ initial_setup() {
         echo $WORKDIR
     echo "=====Deploying insights-client====="
 	$sed_command "s~{{ INSIGHTS_CLIENT_IMAGE }}~$IMAGE_NAME~g" ./test-data/e2e/insights-chart/templates/insights-deployment.yaml
-
+	$sed_command "s~{{ INSIGHTS_CLIENT_CCX_TOKEN }}~$INSIGHTS_CLIENT_CCX_TOKEN~g" ./test-data/e2e/insights-chart/templates/insights-deployment.yaml
     
-    echo "=====Initial setup for tests====="
-	
-
 	echo "Current directory"
 	echo $(pwd)
 	echo -n "Create namespace open-cluster-management-monitoring: " && kubectl create namespace open-cluster-management
@@ -130,14 +124,30 @@ initial_setup() {
 
     echo -n "Installing Insights client deployment :" && kubectl apply -f ./test-data/e2e/insights-chart/templates
     sleep 100s
+	
+
+}
+
+test_content_and_local_cluster_report(){
 	pod=$(oc get pods | grep insights-client | cut -d' ' -f1)
 	oc logs $pod
-	echo "s~$IMAGE_NAME~{{ INSIGHTS_CLIENT_IMAGE }}~g"
-
+	log=$(oc logs $pod) 
+	log_msg=$(echo $log| grep "Creating Policy Info for cluster local-cluster (69365d80-c4ef-4999-8417-f1")
+	if [[ "$log_msg" == *"local-cluster"* ]]; then
+	    echo "Pod log has policy report"
+	else
+		echo "Pod log did not have expected output"
+	    exit 1
+    fi
 	
-    # # change the image name back to INSIGHTS_CLIENT_IMAGE in operator deployment for next run
-	#sed -i '-e' "s~$IMAGE_NAME~{{ INSIGHTS_CLIENT_IMAGE }}~g" ./test-data/e2e/insights-chart/values.yaml
 }
+
+swap_back_to_templates(){
+# # change the image name back to INSIGHTS_CLIENT_IMAGE in operator deployment for next run
+sed -i '-e' "s~$IMAGE_NAME~{{ INSIGHTS_CLIENT_IMAGE }}~g" ./test-data/e2e/insights-chart/templates/insights-deployment.yaml
+sed -i '-e' "s~$INSIGHTS_CLIENT_CCX_TOKEN~{{ INSIGHTS_CLIENT_CCX_TOKEN }}~g" ./test-data/e2e/insights-chart/templates/insights-deployment.yaml
+}
+
 
 
 deploy
