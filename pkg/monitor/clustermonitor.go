@@ -70,7 +70,7 @@ func NewClusterMonitor() *Monitor {
 	}
 	m = &Monitor{
 		ManagedClusterInfo:  []types.ManagedClusterInfo{},
-		ClusterPollInterval: 10 * time.Minute,
+		ClusterPollInterval: time.Duration(config.Cfg.PollInterval) * time.Minute,
 	}
 	return m
 }
