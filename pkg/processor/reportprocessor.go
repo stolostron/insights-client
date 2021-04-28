@@ -74,7 +74,9 @@ func getPolicyReportResults(
                     Properties: map[string]string{
                         "created_at": contentData.Publish_date,
                         // *** total_risk is not currently included in content data, but being added by CCX team.
-                        "total_risk": strconv.Itoa(contentData.Likelihood),
+						"total_risk": strconv.Itoa(contentData.Likelihood),
+						"reason":     contentData.Reason, // Need to figure out where to store this value outside of the PR
+                        "resolution": contentData.Resolution, // Need to figure out where to store this value outside of the PR
 						"component":  report.Component,
 						// Need to store extra data here for templating changes in UI
                     },
