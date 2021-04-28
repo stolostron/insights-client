@@ -64,7 +64,7 @@ func main() {
 	go ret.RetrieveCCXReport(hubID, fetchClusterIDs, fetchPolicyReports)
 
 	processor := processor.NewProcessor()
-	go processor.CreateUpdatePolicyReports(fetchPolicyReports, ret, hubID)
+	go processor.CreateUpdatePolicyReports(fetchPolicyReports)
 
 	refreshToken := true
 	if config.Cfg.CCXToken != "" {
