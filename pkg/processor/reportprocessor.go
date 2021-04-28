@@ -134,6 +134,11 @@ func (p *Processor) CreateUpdatePolicyReports(input chan types.ProcessorData) {
     for {
         data := <-input
 
+		if (data.ClusterInfo.ClusterID == "" || data.ClusterInfo.Namespace == "") {
+			glog.Info("Missing managed cluster ID and/or Namespace nothing to process")
+			return
+		}
+
         dynamicClient := config.GetDynamicClient()
 		policyReportRes, _ := dynamicClient.Resource(policyReportGvr).Namespace(data.ClusterInfo.Namespace).Get(
 			context.TODO(),
