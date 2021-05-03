@@ -15,7 +15,7 @@ const (
 	DEFAULT_HTTP_TIMEOUT     = 180000                                  // 3 minutes HTTP Timeout
 	DEFAULT_USE_MOCK         = false                                   // Use Mocked Cluster ID ?
 	DEFAULT_CCX_SERVER       = "http://localhost:8080/api/v1/clusters" // For local use only
-	DEFAULT_POLL_INTERVAL    = 10                                      // 10 Minutes default polling interval cloud.redhat.com
+	DEFAULT_POLL_INTERVAL    = 10                                      // 10mins default polling interval cloud.redhat.com
 	DEFAULT_REQUEST_INTERVAL = 3                                       // 3 seconds Interval between 2 consequent requests
 )
 

@@ -24,6 +24,7 @@ import (
 )
 
 var lock = sync.RWMutex{}
+var localClusterName = "local-cluster"
 
 // Find returns a bool if the item exists in the given slice
 func Find(slice []types.ManagedClusterInfo, val types.ManagedClusterInfo) (int, bool) {
@@ -174,7 +175,7 @@ func (m *Monitor) processCluster(obj interface{}, handlerType string) {
 func (m *Monitor) addCluster(managedCluster *clusterv1.ManagedCluster) {
 	glog.V(2).Info("Processing Cluster Addition.")
 	// We add the local cluster during Initialization.Using the method GetLocalCluster
-	if managedCluster.GetName() == "local-cluster" {
+	if managedCluster.GetName() == localClusterName {
 		return
 	}
 	clusterVendor, version, clusterID := GetClusterClaimInfo(managedCluster)
@@ -259,7 +260,7 @@ func (m *Monitor) AddLocalCluster(versionObj *unstructured.Unstructured) bool {
 	lock.Lock()
 	m.ManagedClusterInfo = append(m.ManagedClusterInfo, types.ManagedClusterInfo{
 		ClusterID: clusterID,
-		Namespace: "local-cluster",
+		Namespace: localClusterName,
 	})
 	lock.Unlock()
 	return true
@@ -269,7 +270,7 @@ func (m *Monitor) AddLocalCluster(versionObj *unstructured.Unstructured) bool {
 func (m *Monitor) GetLocalCluster() string {
 	glog.V(2).Info("Getting local-cluster id .")
 	for _, cluster := range m.ManagedClusterInfo {
-		if "local-cluster" == cluster.Namespace {
+		if localClusterName == cluster.Namespace {
 			return cluster.ClusterID
 		}
 	}
