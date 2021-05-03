@@ -4,22 +4,22 @@
 package processor
 
 import (
-    "context"
-    "encoding/json"
-    "strconv"
-    "strings"
-    "time"
+	"context"
+	"encoding/json"
+	"strconv"
+	"strings"
+	"time"
 
-    "github.com/golang/glog"
-    "github.com/open-cluster-management/insights-client/pkg/config"
-    "github.com/open-cluster-management/insights-client/pkg/retriever"
-    "github.com/open-cluster-management/insights-client/pkg/types"
+	"github.com/golang/glog"
+	"github.com/open-cluster-management/insights-client/pkg/retriever"
+	"github.com/open-cluster-management/insights-client/pkg/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8sTypes "k8s.io/apimachinery/pkg/types"
-    "sigs.k8s.io/wg-policy-prototypes/policy-report/api/v1alpha2"
+	"k8s.io/client-go/dynamic"
+	"sigs.k8s.io/wg-policy-prototypes/policy-report/api/v1alpha2"
 )
 
 // Processor struct
@@ -34,65 +34,64 @@ var policyReportGvr = schema.GroupVersionResource{
 
 // NewProcessor ...
 func NewProcessor() *Processor {
-    p := &Processor{}
-    return p
+	p := &Processor{}
+	return p
 }
 
 func getPolicyReportResults(
 	reports []types.ReportData,
-    clusterInfo types.ManagedClusterInfo,
-) ([]*v1alpha2.PolicyReportResult) {
+	clusterInfo types.ManagedClusterInfo,
+) []*v1alpha2.PolicyReportResult {
 	var clusterViolations []*v1alpha2.PolicyReportResult
-    for _, report := range reports {
-        // Find the correct Insight content data from cache
+	for _, report := range reports {
+		// Find the correct Insight content data from cache
 		reportData := retriever.ContentsMap[report.Key]
-        if reportData != nil {
-            var contentData types.FormattedContentData
-            reportDataBytes, _ := json.Marshal(reportData)
-            unmarshalError := json.Unmarshal(reportDataBytes, &contentData)
-            if unmarshalError == nil {
-                clusterViolations = append(clusterViolations, &v1alpha2.PolicyReportResult{
-                    Policy:      report.Key,
-                    Description: contentData.Description,
-                    Scored:      false,
-                    Category:    strings.Join(contentData.Tags, ","),
-                    Timestamp:   metav1.Timestamp{Seconds: time.Now().Unix(), Nanos: int32(time.Now().UnixNano())},
-                    Result: "fail",
-                    Properties: map[string]string{
-                        "created_at": contentData.PublishDate,
-                        // *** total_risk is not currently included in content data, but being added by CCX team.
+		if reportData != nil {
+			var contentData types.FormattedContentData
+			reportDataBytes, _ := json.Marshal(reportData)
+			unmarshalError := json.Unmarshal(reportDataBytes, &contentData)
+			if unmarshalError == nil {
+				clusterViolations = append(clusterViolations, &v1alpha2.PolicyReportResult{
+					Policy:      report.Key,
+					Description: contentData.Description,
+					Scored:      false,
+					Category:    strings.Join(contentData.Tags, ","),
+					Timestamp:   metav1.Timestamp{Seconds: time.Now().Unix(), Nanos: int32(time.Now().UnixNano())},
+					Result:      "fail",
+					Properties: map[string]string{
+						"created_at": contentData.PublishDate,
+						// *** total_risk is not currently included in content data, but being added by CCX team.
 						"total_risk": strconv.Itoa(contentData.Likelihood),
-						"reason":     contentData.Reason, // Need to figure out where to store this value outside of the PR
-                        "resolution": contentData.Resolution, // Need to figure out where to store this value outside of the PR
+						"reason":     contentData.Reason,     // Need to figure out where to store this value outside of the PR
+						"resolution": contentData.Resolution, // Need to figure out where to store this value outside of the PR
 						"component":  report.Component,
 						// TODO Need to store extra data here for templating changes in UI
-                    },
+					},
 				})
-            } else {
-                glog.Infof(
-                    "Error unmarshalling Report %v for cluster %s (%s)",
-                    unmarshalError,
-                    clusterInfo.Namespace,
-                    clusterInfo.ClusterID,
+			} else {
+				glog.Infof(
+					"Error unmarshalling Report %v for cluster %s (%s)",
+					unmarshalError,
+					clusterInfo.Namespace,
+					clusterInfo.ClusterID,
 				)
-            }
-        }
+			}
+		}
 	}
 	return clusterViolations
 }
 
 // CreateUpdatePolicyReports - Creates a PolicyReport for cluster if one does not already exist and updates the status of violations
-func (p *Processor) CreateUpdatePolicyReports(input chan types.ProcessorData) {
-    for {
-        data := <-input
+func (p *Processor) CreateUpdatePolicyReports(input chan types.ProcessorData, dynamicClient dynamic.Interface) {
+	for {
+		data := <-input
 
-		if (data.ClusterInfo.ClusterID == "" || data.ClusterInfo.Namespace == "") {
+		if data.ClusterInfo.ClusterID == "" || data.ClusterInfo.Namespace == "" {
 			glog.Info("Missing managed cluster ID and/or Namespace nothing to process")
 			return
 		}
 
 		var currentPolicyReport v1alpha2.PolicyReport
-        dynamicClient := config.GetDynamicClient()
 		policyReportRes, _ := dynamicClient.Resource(policyReportGvr).Namespace(data.ClusterInfo.Namespace).Get(
 			context.TODO(),
 			data.ClusterInfo.Namespace,
@@ -115,25 +114,24 @@ func (p *Processor) CreateUpdatePolicyReports(input chan types.ProcessorData) {
 		)
 		if currentPolicyReport.GetName() == "" && len(clusterViolations) > 0 {
 			// If PolicyReport does not exist for cluster -> create it ONLY if there are violations
-			createPolicyReport(clusterViolations, data.ClusterInfo)
+			createPolicyReport(clusterViolations, data.ClusterInfo, dynamicClient)
 		} else if currentPolicyReport.GetName() != "" && len(clusterViolations) > 0 {
 			// If PolicyReport exists -> add new violations and remove violations no longer present
-			updatePolicyReportViolations(currentPolicyReport, clusterViolations, data.ClusterInfo)
+			updatePolicyReportViolations(currentPolicyReport, clusterViolations, data.ClusterInfo, dynamicClient)
 		} else if currentPolicyReport.GetName() != "" && len(clusterViolations) == 0 {
 			// If PolicyReport no longer has violations -> delete PolicyReport for cluster
-			deletePolicyReport(data.ClusterInfo)
+			deletePolicyReport(data.ClusterInfo, dynamicClient)
 		}
-    }
+	}
 }
 
 func createPolicyReport(
-    clusterViolations []*v1alpha2.PolicyReportResult,
-    clusterInfo types.ManagedClusterInfo,
-) {
+	clusterViolations []*v1alpha2.PolicyReportResult,
+	clusterInfo types.ManagedClusterInfo, dynamicClient dynamic.Interface) {
 	// PolicyReport doesnt exist for cluster - creating
 	policyreport := &v1alpha2.PolicyReport{
 		TypeMeta: metav1.TypeMeta{
-			Kind: "PolicyReport",
+			Kind:       "PolicyReport",
 			APIVersion: "wgpolicyk8s.io/v1alpha2",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -148,7 +146,6 @@ func createPolicyReport(
 	}
 	obj := &unstructured.Unstructured{Object: prUnstructured}
 
-	dynamicClient := config.GetDynamicClient()
 	_, err := dynamicClient.Resource(policyReportGvr).Namespace(clusterInfo.Namespace).Create(
 		context.TODO(),
 		obj,
@@ -174,8 +171,7 @@ func createPolicyReport(
 func updatePolicyReportViolations(
 	currentPolicyReport v1alpha2.PolicyReport,
 	clusterViolations []*v1alpha2.PolicyReportResult,
-    clusterInfo types.ManagedClusterInfo,
-) {
+	clusterInfo types.ManagedClusterInfo, dynamicClient dynamic.Interface) {
 	// merge existing PolicyReport results with new results
 	currentPolicyReport.Results = clusterViolations
 	currentPolicyReport.SetManagedFields(nil)
@@ -184,7 +180,6 @@ func updatePolicyReportViolations(
 		glog.Warningf("Error Marshalling PolicyReport patch object for cluster %s: %v", clusterInfo.Namespace, marshalErr)
 	}
 
-	dynamicClient := config.GetDynamicClient()
 	forcePatch := true
 	successPatchRes, err := dynamicClient.Resource(policyReportGvr).Namespace(clusterInfo.Namespace).Patch(
 		context.TODO(),
@@ -193,7 +188,7 @@ func updatePolicyReportViolations(
 		data,
 		metav1.PatchOptions{
 			FieldManager: "insights-client",
-			Force: &forcePatch,
+			Force:        &forcePatch,
 		},
 	)
 
@@ -223,8 +218,7 @@ func updatePolicyReportViolations(
 	}
 }
 
-func deletePolicyReport(clusterInfo types.ManagedClusterInfo) {
-	dynamicClient := config.GetDynamicClient()
+func deletePolicyReport(clusterInfo types.ManagedClusterInfo, dynamicClient dynamic.Interface) {
 	deleteErr := dynamicClient.Resource(policyReportGvr).Namespace(clusterInfo.Namespace).Delete(
 		context.TODO(),
 		clusterInfo.Namespace,
