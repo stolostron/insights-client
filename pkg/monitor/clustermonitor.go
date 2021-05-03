@@ -257,13 +257,18 @@ func (m *Monitor) AddLocalCluster(versionObj *unstructured.Unstructured) bool {
 		glog.V(2).Infof("Failed to get OCP clusterID from version: %v", err)
 		return false
 	}
-	lock.Lock()
-	m.ManagedClusterInfo = append(m.ManagedClusterInfo, types.ManagedClusterInfo{
-		ClusterID: clusterID,
-		Namespace: localClusterName,
-	})
-	lock.Unlock()
-	return true
+	// If the cluster ID is not empty add to list and return true
+	if clusterID != "" {
+		lock.Lock()
+		m.ManagedClusterInfo = append(m.ManagedClusterInfo, types.ManagedClusterInfo{
+			ClusterID: clusterID,
+			Namespace: localClusterName,
+		})
+		lock.Unlock()
+		return true
+	}
+
+	return false
 }
 
 // Get LocalCluster ID from  Clusters list
