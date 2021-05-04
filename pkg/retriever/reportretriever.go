@@ -249,8 +249,8 @@ func (r *Retriever) FetchClusters(monitor *monitor.Monitor, input chan types.Man
 		for _, cluster := range monitor.ManagedClusterInfo {
 			glog.Infof("Starting to get  cluster report for  %s", cluster)
 			input <- cluster
+			time.Sleep(time.Duration(config.Cfg.RequestInterval) * time.Second)
 		}
 		lock.RUnlock()
 	}
-
 }
