@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/tools/cache"
 
@@ -23,6 +24,7 @@ import (
 )
 
 var lock = sync.RWMutex{}
+var localClusterName = "local-cluster"
 
 // Find returns a bool if the item exists in the given slice
 func Find(slice []types.ManagedClusterInfo, val types.ManagedClusterInfo) (int, bool) {
@@ -70,7 +72,7 @@ func NewClusterMonitor() *Monitor {
 	}
 	m = &Monitor{
 		ManagedClusterInfo:  []types.ManagedClusterInfo{},
-		ClusterPollInterval: 10 * time.Minute,
+		ClusterPollInterval: time.Duration(config.Cfg.PollInterval) * time.Minute,
 	}
 	return m
 }
@@ -173,7 +175,7 @@ func (m *Monitor) processCluster(obj interface{}, handlerType string) {
 func (m *Monitor) addCluster(managedCluster *clusterv1.ManagedCluster) {
 	glog.V(2).Info("Processing Cluster Addition.")
 	// We add the local cluster during Initialization.Using the method GetLocalCluster
-	if managedCluster.GetName() == "local-cluster" {
+	if managedCluster.GetName() == localClusterName {
 		return
 	}
 	clusterVendor, version, clusterID := GetClusterClaimInfo(managedCluster)
@@ -232,31 +234,50 @@ func (m *Monitor) deleteCluster(managedCluster *clusterv1.ManagedCluster) {
 	}
 }
 
-// GetLocalCluster Get Local cluster ID
-func (m *Monitor) GetLocalCluster() string {
+// Add LocalCluster  to Clusters list
+func (m *Monitor) AddLocalCluster(versionObj *unstructured.Unstructured) bool {
 	var clusterVersionGvr = schema.GroupVersionResource{
 		Group:    "config.openshift.io",
 		Version:  "v1",
 		Resource: "clusterversions",
 	}
-	glog.V(2).Info("Get Local Cluster ID.")
-	dynamicClient := config.GetDynamicClient()
-	versionObj, err := dynamicClient.Resource(clusterVersionGvr).Get(context.TODO(), "version", metav1.GetOptions{})
+	var dynamicClient dynamic.Interface
+	var err error
+	glog.V(2).Info("Adding Local Cluster ID.")
+	if versionObj == nil {
+		dynamicClient = config.GetDynamicClient()
+		versionObj, err = dynamicClient.Resource(clusterVersionGvr).Get(context.TODO(), "version", metav1.GetOptions{})
+	}
 	if err != nil {
 		glog.V(2).Infof("Failed to get clusterversions : %v", err)
-		return "-1"
+		return false
 	}
 	clusterID, _, err := unstructured.NestedString(versionObj.Object, "spec", "clusterID")
 	if err != nil {
 		glog.V(2).Infof("Failed to get OCP clusterID from version: %v", err)
-		return "-1"
+		return false
 	}
-	lock.Lock()
-	m.ManagedClusterInfo = append(m.ManagedClusterInfo, types.ManagedClusterInfo{
-		ClusterID: clusterID,
-		Namespace: "local-cluster",
-	})
-	lock.Unlock()
+	// If the cluster ID is not empty add to list and return true
+	if clusterID != "" {
+		lock.Lock()
+		m.ManagedClusterInfo = append(m.ManagedClusterInfo, types.ManagedClusterInfo{
+			ClusterID: clusterID,
+			Namespace: localClusterName,
+		})
+		lock.Unlock()
+		return true
+	}
 
-	return clusterID
+	return false
+}
+
+// Get LocalCluster ID from  Clusters list
+func (m *Monitor) GetLocalCluster() string {
+	glog.V(2).Info("Getting local-cluster id .")
+	for _, cluster := range m.ManagedClusterInfo {
+		if localClusterName == cluster.Namespace {
+			return cluster.ClusterID
+		}
+	}
+	return ""
 }

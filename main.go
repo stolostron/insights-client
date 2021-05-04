@@ -17,6 +17,7 @@ import (
 	"github.com/open-cluster-management/insights-client/pkg/processor"
 	"github.com/open-cluster-management/insights-client/pkg/retriever"
 	"github.com/open-cluster-management/insights-client/pkg/types"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 func main() {
@@ -45,7 +46,11 @@ func main() {
 	//Wait for hub cluster id to make GET API call
 	hubID := "-1"
 	for hubID == "-1" {
-		hubID = monitor.GetLocalCluster()
+		var versionResource *unstructured.Unstructured
+		//If Local cluster is added and is not empty, get hub ID
+		if monitor.AddLocalCluster(versionResource) && monitor.GetLocalCluster() != "" {
+			hubID = monitor.GetLocalCluster()
+		}
 		glog.Info("Waiting for local-cluster Id.")
 		time.Sleep(2 * time.Second)
 	}

@@ -12,6 +12,7 @@ import (
 	clusterv1 "github.com/open-cluster-management/api/cluster/v1"
 	"github.com/open-cluster-management/insights-client/pkg/types"
 	"github.com/stretchr/testify/assert"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 func unmarshalFile(filepath string, resourceType interface{}, t *testing.T) {
@@ -70,4 +71,48 @@ func Test_isClustermissing(t *testing.T) {
 	err := errors.New("could not find the requested resource")
 	resultTrue := isClusterMissing(err)
 	assert.Equal(t, true, resultTrue, "Test isClusterMissing - true")
+}
+
+func Test_AddLocalCluster(t *testing.T) {
+	monitor := NewClusterMonitor()
+	versionU := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "v1",
+			"kind":       "clusterversions",
+			"metadata": map[string]interface{}{
+				"namespace": "namespace",
+				"name":      "version",
+			},
+			"spec": map[string]interface{}{
+				"channel":   "stable - 4.6",
+				"clusterID": "58bd7441-812e-4fab-9aa6-eec452059c59",
+				"upstream":  "https://api.openshift.com/api/upgrades_info/v1/graph",
+			},
+		},
+	}
+	monitor.AddLocalCluster(versionU)
+	assert.Equal(t, types.ManagedClusterInfo{Namespace: "local-cluster", ClusterID: "58bd7441-812e-4fab-9aa6-eec452059c59"}, monitor.ManagedClusterInfo[0], "Test AddLocalCluster: local-cluster")
+
+}
+
+func Test_GetLocalCluster(t *testing.T) {
+	monitor := NewClusterMonitor()
+	versionU := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "v1",
+			"kind":       "clusterversions",
+			"metadata": map[string]interface{}{
+				"namespace": "namespace",
+				"name":      "version",
+			},
+			"spec": map[string]interface{}{
+				"channel":   "stable - 4.6",
+				"clusterID": "58bd7441-812e-4fab-9aa6-eec452059c59",
+				"upstream":  "https://api.openshift.com/api/upgrades_info/v1/graph",
+			},
+		},
+	}
+	monitor.AddLocalCluster(versionU)
+	assert.Equal(t, "58bd7441-812e-4fab-9aa6-eec452059c59", monitor.GetLocalCluster(), "Test GetLocalCluster: local-cluster")
+
 }
