@@ -245,6 +245,9 @@ func (r *Retriever) FetchClusters(monitor *monitor.Monitor, input chan types.Man
 				glog.Warningf("Unable to get CRC Token, Using previous Token: %v", err)
 			}
 		}
+		if len(monitor.ManagedClusterInfo) == 0 {
+			return
+		}
 		lock.RLock()
 		for _, cluster := range monitor.ManagedClusterInfo {
 			glog.Infof("Starting to get  cluster report for  %s", cluster)
