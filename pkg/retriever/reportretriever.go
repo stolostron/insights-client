@@ -56,7 +56,8 @@ func NewRetriever(ccxurl string, ContentURL string, client *http.Client,
 			caCertPool.AppendCertsFromPEM(decodedCert)
 
 			tlsCfg := &tls.Config{
-				RootCAs: caCertPool,
+				MinVersion: tls.VersionTLS12,
+				RootCAs:    caCertPool,
 			}
 
 			tr := &http.Transport{
