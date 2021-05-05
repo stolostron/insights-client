@@ -47,7 +47,7 @@ func NewRetriever(ccxurl string, ContentURL string, client *http.Client,
 		if config.Cfg.CACert != "" {
 			// If caCert is defiend in Insights-client deployment - we need to use it in http client
 			// This will be used only for dev & testing purposes to use qaprodauth.cloud.redhat.com
-			decodedCert, err := b64.URLEncoding.DecodeString(config.Cfg.Cert)
+			decodedCert, err := b64.URLEncoding.DecodeString(config.Cfg.CACert)
 			if err != nil {
 				// Exit because this is an unrecoverable configuration problem.
 				glog.Fatal("Error decoding CA certificate. Certificate must be a base64 encoded CA certificate. Error: ", err)
