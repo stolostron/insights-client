@@ -134,47 +134,48 @@ func patchRequest(
 // CreateUpdatePolicyReports - Creates a PolicyReport for cluster if one does not already exist and updates the status of violations
 func (p *Processor) CreateUpdatePolicyReports(input chan types.ProcessorData) {
     for {
-        data := <-input
+		data := <-input
 
-		if (data.ClusterInfo.ClusterID == "" || data.ClusterInfo.Namespace == "") {
-			glog.Info("Missing managed cluster ID and/or Namespace nothing to process")
-			return
-		}
-
-        dynamicClient := config.GetDynamicClient()
-		policyReportRes, _ := dynamicClient.Resource(policyReportGvr).Namespace(data.ClusterInfo.Namespace).Get(
-			context.TODO(),
-			data.ClusterInfo.Namespace,
-			metav1.GetOptions{},
-		)
-
-		if policyReportRes != nil {
-			unstructConvErr := runtime.DefaultUnstructuredConverter.FromUnstructured(
-				policyReportRes.UnstructuredContent(),
-				&currentPolicyReport,
+		if len(data.Reports.Reports) == 0 && data.ClusterInfo.Namespace != "" {
+			glog.Infof("Cluster %s is healthy. No Insights to process.", data.ClusterInfo.Namespace)
+		} else if (data.ClusterInfo.ClusterID == "" || data.ClusterInfo.Namespace == "") {
+			glog.Info("Missing cluster ID and/or Namespace nothing to process")
+		} else {
+			dynamicClient := config.GetDynamicClient()
+			policyReportRes, _ := dynamicClient.Resource(policyReportGvr).Namespace(data.ClusterInfo.Namespace).Get(
+				context.TODO(),
+				data.ClusterInfo.Namespace,
+				metav1.GetOptions{},
 			)
-			if unstructConvErr != nil {
-				glog.Warningf("Error unstructuring PolicyReport for cluster: %s", data.ClusterInfo.Namespace)
-				return
+
+			if policyReportRes != nil {
+				unstructConvErr := runtime.DefaultUnstructuredConverter.FromUnstructured(
+					policyReportRes.UnstructuredContent(),
+					&currentPolicyReport,
+				)
+				if unstructConvErr != nil {
+					glog.Warningf("Error unstructuring PolicyReport for cluster: %s", data.ClusterInfo.Namespace)
+					return
+				}
 			}
-		}
-		newPolicyReportViolations := getPolicyReportResults(
-			data.Reports.Reports,
-			data.ClusterInfo,
-		)
-		if currentPolicyReport.GetName() == "" {
-			// If the PolicyReport does not exist on the cluster create it
-			createPolicyReport(newPolicyReportViolations, data.ClusterInfo)
-		} else if currentPolicyReport.GetName() != "" {
-			// PolicyReport exists on cluster - Adding rule violations
-			if len(newPolicyReportViolations) > 0 {
-				// If the PolicyReport exists need to update the results if there are new violations
-				addPolicyReportViolations(newPolicyReportViolations, data.ClusterInfo)
-			}
-			// Only update statuses if the PolicyReport has > 0 violations
-			if len(currentPolicyReport.Results) > 0 {
-				// Update status of existing PolicyReport violations
-				updatePolicyReportResultStatus(data.Reports, data.ClusterInfo)
+			newPolicyReportViolations := getPolicyReportResults(
+				data.Reports.Reports,
+				data.ClusterInfo,
+			)
+			if currentPolicyReport.GetName() == "" {
+				// If the PolicyReport does not exist on the cluster create it
+				createPolicyReport(newPolicyReportViolations, data.ClusterInfo)
+			} else if currentPolicyReport.GetName() != "" {
+				// PolicyReport exists on cluster - Adding rule violations
+				if len(newPolicyReportViolations) > 0 {
+					// If the PolicyReport exists need to update the results if there are new violations
+					addPolicyReportViolations(newPolicyReportViolations, data.ClusterInfo)
+				}
+				// Only update statuses if the PolicyReport has > 0 violations
+				if len(currentPolicyReport.Results) > 0 {
+					// Update status of existing PolicyReport violations
+					updatePolicyReportResultStatus(data.Reports, data.ClusterInfo)
+				}
 			}
 		}
     }
