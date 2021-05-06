@@ -14,13 +14,7 @@ Uses Red Hat Connected Customer Experience (CCX) to provide health check insight
     ```
 3. Log into your development cluster with `oc login ...`.
     > **Alternative:** set the `KUBECONFIG` environment variable to some other kubernetes config file.
-4. Set env vars to use qaprodauth server. qaprodauth allows devs to manually generate Insights on a specific cluster
-    ```
-    CCX_SERVER=https://qaprodauth.cloud.redhat.com/api/insights-results-aggregator/v1
-    CCX_TOKEN=Basic: <echo -n qaprodauth-username:quaprodauth-password | base64>
-    CACERT=<obtained by running generate_qaprodauth_cert.sh>
-    ```
-5. Run the program
+4. Run the program
     ```
     make run
     ```
@@ -31,7 +25,7 @@ Control the behavior of this service with these environment variables.
 Name             | Required | Default Value                           | Description
 ---------------- | -------- | --------------------------------------- | -----------
 HTTP_TIMEOUT     | no       | 180000                                  | 3 minute timeout to process a single requests
-CCX_SERVER       | no       | http://localhost:8080/api/v1/clusters | CCX server url (prod will use: `https://cloud.redhat.com/api/insights-results-aggregator/v1`)
+CCX_SERVER       | no       | http://localhost:8080/api/v1/clusters   | CCX server url (prod will use: `https://cloud.redhat.com/api/insights-results-aggregator/v1`)
 CCX_TOKEN        | no       | Not set                                 | If not set client will get cloud.openshift.com token from secret `openshift-config`
 POLL_INTERVAL    | no       | 30                                      | 30 minute default polling interval cloud.redhat.com
 REQUEST_INTERVAL | no       | 1                                       | 1 second Interval between 2 consecutive Insights requests
