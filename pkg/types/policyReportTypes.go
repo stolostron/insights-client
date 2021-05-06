@@ -12,7 +12,6 @@ type PostBody struct {
 
 type Reports struct {
 	Reports []ReportData     `json:"reports"`
-	Skips   []SkippedReports `json:"skips"`
 }
 
 type ReportData struct {
@@ -20,10 +19,6 @@ type ReportData struct {
 	Key       string      `json:"key"`
 	Component string      `json:"component"`
 	Details   interface{} `json:"details"`
-}
-
-type SkippedReports struct {
-	RuleID string `json:"rule_fqdn"`
 }
 
 type ProcessorData struct {

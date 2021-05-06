@@ -69,7 +69,8 @@ func main() {
 	go ret.RetrieveCCXReport(hubID, fetchClusterIDs, fetchPolicyReports)
 
 	processor := processor.NewProcessor()
-	go processor.CreateUpdatePolicyReports(fetchPolicyReports)
+	dynamicClient := config.GetDynamicClient()
+	go processor.CreateUpdatePolicyReports(fetchPolicyReports, dynamicClient)
 
 	refreshToken := true
 	if config.Cfg.CCXToken != "" {
