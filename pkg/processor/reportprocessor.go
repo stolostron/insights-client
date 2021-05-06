@@ -107,6 +107,8 @@ func (p *Processor) CreateUpdatePolicyReports(input chan types.ProcessorData, dy
 				glog.Warningf("Error unstructuring PolicyReport for cluster: %s", data.ClusterInfo.Namespace)
 				return
 			}
+		} else {
+			currentPolicyReport = v1alpha2.PolicyReport{}
 		}
 		clusterViolations := getPolicyReportResults(
 			data.Reports.Reports,
