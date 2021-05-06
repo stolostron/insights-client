@@ -233,6 +233,9 @@ func (r *Retriever) GetPolicyInfo(
 ) (types.ProcessorData, error) {
 	glog.Infof("Creating Policy Info for cluster %s (%s)", cluster.Namespace, cluster.ClusterID)
 	reports := types.Reports{}
+	for clusterErrored := range responseBody.Errors {
+        glog.Warningf("Error occured while requesting Insights for cluster: %s", clusterErrored)
+    }
 
 	// loop through the clusters in the response and pull out the report violations
 	for reportClusterID := range responseBody.Reports {

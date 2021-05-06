@@ -206,7 +206,7 @@ func (m *Monitor) updateCluster(managedCluster *clusterv1.ManagedCluster) {
 		glog.Infof("Updating %s from Insights cluster list", clusterToUpdate)
 		m.ManagedClusterInfo[clusterIdx] = types.ManagedClusterInfo{
 			ClusterID: clusterID,
-			Namespace: managedCluster.GetName(),
+			Namespace: clusterToUpdate,
 		}
 		return
 	}
