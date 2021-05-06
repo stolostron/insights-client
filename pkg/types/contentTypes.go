@@ -25,7 +25,7 @@ type Metadata struct {
 	Description  string   `json:"description"`
 	Impact       string   `json:"impact"`
 	Likelihood   int      `json:"likelihood"`
-	Publish_date string   `json:"publish_date"`
+	PublishDate string    `json:"publish_date"`
 	Status       string   `json:"status"`
 	Tags         []string `json:"tags"`
 }
@@ -40,7 +40,8 @@ type FormattedContentData struct {
 	Description  string   `json:"description"`
 	Impact       string   `json:"impact"`
 	Likelihood   int      `json:"likelihood"`
-	Publish_date string   `json:"publish_date"`
+	// TotalRisk    int      `json:"total_risk"`
+	PublishDate  string   `json:"publish_date"`
 	Status       string   `json:"status"`
 	Tags         []string `json:"tags"`
 }
