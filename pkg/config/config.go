@@ -14,7 +14,6 @@ import (
 const (
 	DEFAULT_SERVICE_PORT     = ":3030"
 	DEFAULT_HTTP_TIMEOUT     = 180000                                  // 3 minutes HTTP Timeout
-	DEFAULT_USE_MOCK         = false                                   // Use Mocked Cluster ID ?
 	DEFAULT_CCX_SERVER       = "http://localhost:8080/api/v1/clusters" // For local use only
 	DEFAULT_POLL_INTERVAL    = 30                                      // 30mins default polling interval cloud.redhat.com
 	DEFAULT_REQUEST_INTERVAL = 1                                       // 1 second Interval between 2 consecutive requests
@@ -24,7 +23,6 @@ const (
 type Config struct {
 	ServicePort     string `env:"SERVICE_PORT"`
 	HTTPTimeout     int    `env:"HTTP_TIMEOUT"`     // timeout when the http server should drop connections
-	UseMock         bool   `env:"USE_MOCK"`         // Use Mock Server or actual endpoint
 	CCXServer       string `env:"CCX_SERVER"`
 	KubeConfig      string `env:"KUBECONFIG"`       // Local kubeconfig path
 	CCXToken        string `env:"CCX_TOKEN"`        // Token to access CCX server , when pull-secret cannot be used
@@ -48,7 +46,6 @@ func init() {
 	setDefaultInt(&Cfg.HTTPTimeout, "HTTP_TIMEOUT", DEFAULT_HTTP_TIMEOUT)
 	setDefaultInt(&Cfg.PollInterval, "POLL_INTERVAL", DEFAULT_POLL_INTERVAL)
 	setDefaultInt(&Cfg.RequestInterval, "REQUEST_INTERVAL", DEFAULT_REQUEST_INTERVAL)
-	setDefaultBool(&Cfg.UseMock, "USE_MOCK", DEFAULT_USE_MOCK)
 	defaultKubePath := filepath.Join(os.Getenv("HOME"), ".kube", "config")
 	if _, err := os.Stat(defaultKubePath); os.IsNotExist(err) {
 		// set default to empty string if path does not reslove
