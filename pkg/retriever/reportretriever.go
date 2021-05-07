@@ -6,6 +6,9 @@ package retriever
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	b64 "encoding/base64"
 	"encoding/json"
 	e "errors"
 	"fmt"
@@ -41,7 +44,30 @@ type serializedAuth struct {
 func NewRetriever(ccxurl string, ContentURL string, client *http.Client,
 	token string) *Retriever {
 	if client == nil {
-		client = &http.Client{}
+		if config.Cfg.CACert != "" {
+			// If caCert is defiend in Insights-client deployment - we need to use it in http client
+			// This will be used only for dev & testing purposes to use qaprodauth.cloud.redhat.com
+			decodedCert, err := b64.URLEncoding.DecodeString(config.Cfg.CACert)
+			if err != nil {
+				// Exit because this is an unrecoverable configuration problem.
+				glog.Fatal("Error decoding CA certificate. Certificate must be a base64 encoded CA certificate. Error: ", err)
+			}
+			caCertPool := x509.NewCertPool()
+			caCertPool.AppendCertsFromPEM(decodedCert)
+
+			tlsCfg := &tls.Config{
+				MinVersion: tls.VersionTLS12,
+				RootCAs:    caCertPool,
+			}
+
+			tr := &http.Transport{
+				TLSClientConfig: tlsCfg,
+			}
+
+			client = &http.Client{Transport: tr}
+		} else {
+			client = &http.Client{}
+		}
 	}
 	r := &Retriever{
 		Client:     client,
@@ -207,6 +233,9 @@ func (r *Retriever) GetPolicyInfo(
 ) (types.ProcessorData, error) {
 	glog.Infof("Creating Policy Info for cluster %s (%s)", cluster.Namespace, cluster.ClusterID)
 	reports := types.Reports{}
+	for clusterErrored := range responseBody.Errors {
+        glog.Warningf("Error occured while requesting Insights for cluster: %s", clusterErrored)
+    }
 
 	// loop through the clusters in the response and pull out the report violations
 	for reportClusterID := range responseBody.Reports {
@@ -231,7 +260,10 @@ func (r *Retriever) GetPolicyInfo(
 			}, nil
 		}
 	}
-	return types.ProcessorData{}, nil
+	return types.ProcessorData{
+		ClusterInfo: cluster,
+		Reports:     types.Reports{},
+	}, nil
 }
 
 // FetchClusters forwards the managed clusters to RetrieveCCXReports function

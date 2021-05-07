@@ -206,14 +206,14 @@ func updatePolicyReportViolations(
 
 	if err != nil {
 		glog.Infof(
-			"Error adding new PolicyReport violations for cluster %s (%s): %v",
+			"Error updating Insights for cluster %s (%s): %v",
 			clusterInfo.Namespace,
 			clusterInfo.ClusterID,
 			err,
 		)
 	} else {
 		glog.Infof(
-			"Successfully added new PolicyReport violations for cluster %s (%s)",
+			"Successfully updated Insights for cluster %s (%s)",
 			clusterInfo.Namespace,
 			clusterInfo.ClusterID,
 		)

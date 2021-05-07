@@ -4,6 +4,7 @@ package types
 
 type ResponseBody struct {
 	Reports map[string]interface{} `json:"reports"`
+	Errors  map[string]string      `json:"errors"`
 }
 
 type PostBody struct {

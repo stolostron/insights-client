@@ -19,8 +19,8 @@ var ContentsMap map[string]map[string]interface{}
 var lock = sync.RWMutex{}
 
 // GetContentRequest - Creates GET request for contents
-func (r *Retriever) GetContentRequest(ctx context.Context, clusterID string) (*http.Request, error) {
-	glog.Infof("Creating Content Request for cluster %s using  URL %s :", clusterID, r.ContentURL)
+func (r *Retriever) GetContentRequest(ctx context.Context, hubID string) (*http.Request, error) {
+	glog.Infof("Creating Content Request for cluster %s using  URL %s :", hubID, r.ContentURL)
 	req, err := http.NewRequest("GET", r.ContentURL, nil)
 	if err != nil {
 		glog.Warningf("Error creating HttpRequest with endpoint %s, %v", r.ContentURL, err)
@@ -29,7 +29,7 @@ func (r *Retriever) GetContentRequest(ctx context.Context, clusterID string) (*h
 	// userAgent for value will be updated to insights-client once the
 	// the task https://github.com/RedHatInsights/insights-results-smart-proxy/issues/450
 	// is completed
-	userAgent := "insights-operator/v1.0.0+b653953-b653953ed174001d5aca50b3515f1fa6f6b28728 cluster/" + clusterID
+	userAgent := "insights-operator/v1.0.0+b653953-b653953ed174001d5aca50b3515f1fa6f6b28728 cluster/" + hubID
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", userAgent)
 	req.Header.Set("Authorization", r.Token)
@@ -61,15 +61,15 @@ func (r *Retriever) CallContents(req *http.Request) (types.ContentsResponse, err
 }
 
 // Function to make a GET HTTP call to get all the contents for reports
-func (r *Retriever) retrieveCCXContent(clusterID string) int {
-	req, err := r.GetContentRequest(context.TODO(), clusterID)
+func (r *Retriever) retrieveCCXContent(hubID string) int {
+	req, err := r.GetContentRequest(context.TODO(), hubID)
 	if err != nil {
 		glog.Warningf("Error creating HttpRequest with endpoint %s, %v", r.ContentURL, err)
 		return -1
 	}
 	contents, err := r.CallContents(req)
 	if err != nil {
-		glog.Warningf("Error calling for contents %s, %v", clusterID, err)
+		glog.Warningf("Error calling for contents %s, %v", hubID, err)
 		return -1
 	}
 	r.createContents(contents)
