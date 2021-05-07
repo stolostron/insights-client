@@ -45,11 +45,11 @@ func getPolicyReportResults(
 	var clusterViolations []*v1alpha2.PolicyReportResult
 	for _, report := range reports {
 		// Find the correct Insight content data from cache
-		reportData := retriever.ContentsMap[report.Key]
-		if reportData != nil {
+		reportContentData := retriever.ContentsMap[report.Key]
+		if reportContentData != nil && !strings.Contains(report.RuleID, "ccx_rules_ocm.tutorial_rule") {
 			var contentData types.FormattedContentData
-			reportDataBytes, _ := json.Marshal(reportData)
-			unmarshalError := json.Unmarshal(reportDataBytes, &contentData)
+			reportContentDataBytes, _ := json.Marshal(reportContentData)
+			unmarshalError := json.Unmarshal(reportContentDataBytes, &contentData)
 			if unmarshalError == nil {
 				clusterViolations = append(clusterViolations, &v1alpha2.PolicyReportResult{
 					Policy:      report.Key,
