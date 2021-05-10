@@ -76,7 +76,6 @@ func setUp(t *testing.T) {
 	}
 
 	scheme := runtime.NewScheme()
-	v1alpha2.AddToScheme(scheme)
 	scheme.AddKnownTypes(corev1.SchemeGroupVersion, &corev1.Namespace{})
 	scheme.AddKnownTypes(v1alpha2.SchemeGroupVersion, &v1alpha2.PolicyReport{})
 
