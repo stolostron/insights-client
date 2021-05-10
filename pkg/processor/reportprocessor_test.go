@@ -47,7 +47,6 @@ var respBody types.ResponseBody
 var processor *Processor
 
 func setUp(t *testing.T) {
-	fmt.Println("In setup")
 	fetchPolicyReports = make(chan types.ProcessorData, 1)
 
 	var postBody types.PostBody
@@ -57,7 +56,6 @@ func setUp(t *testing.T) {
 		if err == nil {
 			w.Header().Set("Content-Type", "application/json")
 			_ = mocks.GetMockData(string(postBody.Clusters[0]))
-			// fmt.Fprintln(w, string(response))
 		}
 	}
 	ts := httptest.NewServer(http.HandlerFunc(postFunc))
@@ -65,36 +63,26 @@ func setUp(t *testing.T) {
 	ret = retriever.NewRetriever("testCCXUrl", ts.URL, nil, "testToken")
 
 	mngd = types.ManagedClusterInfo{Namespace: "testCluster", ClusterID: "972ea7cf-7428-438f-ade8-12ac4794ede0"}
-	// fmt.Println("report length: ", len(a.Reports))
 
 	fmt.Println("Load contentsMap")
 	var content types.ContentsResponse
-	// fetchPolicyReports = make(chan types.ProcessorData, 1)
 	UnmarshalFile("content.json", &content, t)
-	// fmt.Println("Unmarshaling reports")
 	ret.CreateContents(content)
-	fmt.Println("Loaded contents")
 
-	//----
 	namespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: mngd.Namespace,
 		},
 	}
 
-	//----
-
 	scheme := runtime.NewScheme()
 	v1alpha2.AddToScheme(scheme)
 	scheme.AddKnownTypes(corev1.SchemeGroupVersion, &corev1.Namespace{})
 	scheme.AddKnownTypes(v1alpha2.SchemeGroupVersion, &v1alpha2.PolicyReport{})
-	fmt.Println("Added known types to scheme")
 
 	fakeDynamicClient = dynamicfakeclient.NewSimpleDynamicClient(scheme, namespace)
-	fmt.Println("Created fakeDynamicClient")
 
 	processor = NewProcessor()
-	fmt.Println("Created Processor ")
 	fmt.Println("Setup complete")
 
 }
