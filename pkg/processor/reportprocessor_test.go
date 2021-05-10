@@ -96,7 +96,7 @@ func addReportToChannel(t *testing.T, filename string) {
 }
 func Test_createPolicyReport(t *testing.T) {
 	setUp(t)
-	addReportToChannel(t, "createReport.json")
+	addReportToChannel(t, "createreporttest.json")
 
 	processor.createUpdatePolicyReports(fetchPolicyReports, fakeDynamicClient)
 	createdPolicyReport := &v1alpha2.PolicyReport{}

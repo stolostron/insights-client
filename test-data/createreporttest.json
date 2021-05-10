@@ -82,7 +82,7 @@
         ],
         "skips": [
           {
-            "details": "All: ['ccx_rules_ocp.external.rules.operator_unmanaged.get_unmanaged_operators'] Any: ",
+            "details": "All: ['ccx_rules_ocp.external.rules.operator_unmanaged.get_unmanaged_operators1'] Any: ",
             "reason": "MISSING_REQUIREMENTS",
             "rule_fqdn": "ccx_rules_ocp.external.rules.operator_unmanaged.report",
             "type": "skip"
