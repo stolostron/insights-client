@@ -72,7 +72,7 @@ func (r *Retriever) retrieveCCXContent(hubID string) int {
 		glog.Warningf("Error calling for contents %s, %v", hubID, err)
 		return -1
 	}
-	r.createContents(contents)
+	r.CreateContents(contents)
 	return len(ContentsMap)
 }
 
@@ -82,7 +82,7 @@ func (r *Retriever) InitializeContents(hubID string) int {
 }
 
 // Populate json response from /contents call onto a Map to quick lookup
-func (r *Retriever) createContents(responseBody types.ContentsResponse) {
+func (r *Retriever) CreateContents(responseBody types.ContentsResponse) {
 	glog.Infof("Creating Contents from json ")
 	ContentsMap = make(map[string]map[string]interface{})
 

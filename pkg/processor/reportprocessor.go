@@ -82,48 +82,49 @@ func getPolicyReportResults(
 }
 
 // CreateUpdatePolicyReports - Creates a PolicyReport for cluster if one does not already exist and updates the status of violations
-func (p *Processor) CreateUpdatePolicyReports(input chan types.ProcessorData, dynamicClient dynamic.Interface) {
-	for {
-		data := <-input
+func (p *Processor) createUpdatePolicyReports(input chan types.ProcessorData, dynamicClient dynamic.Interface) {
+	data := <-input
 
-		if data.ClusterInfo.ClusterID == "" || data.ClusterInfo.Namespace == "" {
-			glog.Info("Missing managed cluster ID and/or Namespace nothing to process")
+	if data.ClusterInfo.ClusterID == "" || data.ClusterInfo.Namespace == "" {
+		glog.Info("Missing managed cluster ID and/or Namespace nothing to process")
+		return
+	}
+	glog.Info("Managed cluster ID and/or Namespace present in data")
+	currentPolicyReport := v1alpha2.PolicyReport{}
+	policyReportRes, _ := dynamicClient.Resource(policyReportGvr).Namespace(data.ClusterInfo.Namespace).Get(
+		context.TODO(),
+		data.ClusterInfo.Namespace,
+		metav1.GetOptions{},
+	)
+
+	if policyReportRes != nil {
+		unstructConvErr := runtime.DefaultUnstructuredConverter.FromUnstructured(
+			policyReportRes.UnstructuredContent(),
+			&currentPolicyReport,
+		)
+		if unstructConvErr != nil {
+			glog.Warningf("Error unstructuring PolicyReport for cluster: %s", data.ClusterInfo.Namespace)
 			return
 		}
+	}
 
-		var currentPolicyReport v1alpha2.PolicyReport
-		policyReportRes, _ := dynamicClient.Resource(policyReportGvr).Namespace(data.ClusterInfo.Namespace).Get(
-			context.TODO(),
-			data.ClusterInfo.Namespace,
-			metav1.GetOptions{},
-		)
+	clusterViolations := getPolicyReportResults(
+		data.Reports.Reports,
+		data.ClusterInfo,
+	)
+	if len(clusterViolations) == 0 {
+		glog.Info("No violations to report at present. Cluster is healthy")
+	}
 
-		if policyReportRes != nil {
-			unstructConvErr := runtime.DefaultUnstructuredConverter.FromUnstructured(
-				policyReportRes.UnstructuredContent(),
-				&currentPolicyReport,
-			)
-			if unstructConvErr != nil {
-				glog.Warningf("Error unstructuring PolicyReport for cluster: %s", data.ClusterInfo.Namespace)
-				return
-			}
-		} else {
-			currentPolicyReport = v1alpha2.PolicyReport{}
-		}
-		clusterViolations := getPolicyReportResults(
-			data.Reports.Reports,
-			data.ClusterInfo,
-		)
-		if currentPolicyReport.GetName() == "" && len(clusterViolations) > 0 {
-			// If PolicyReport does not exist for cluster -> create it ONLY if there are violations
-			createPolicyReport(clusterViolations, data.ClusterInfo, dynamicClient)
-		} else if currentPolicyReport.GetName() != "" && len(clusterViolations) > 0 {
-			// If PolicyReport exists -> add new violations and remove violations no longer present
-			updatePolicyReportViolations(currentPolicyReport, clusterViolations, data.ClusterInfo, dynamicClient)
-		} else if currentPolicyReport.GetName() != "" && len(clusterViolations) == 0 {
-			// If PolicyReport no longer has violations -> delete PolicyReport for cluster
-			deletePolicyReport(data.ClusterInfo, dynamicClient)
-		}
+	if currentPolicyReport.GetName() == "" && len(clusterViolations) > 0 {
+		// If PolicyReport does not exist for cluster -> create it ONLY if there are violations
+		createPolicyReport(clusterViolations, data.ClusterInfo, dynamicClient)
+	} else if currentPolicyReport.GetName() != "" && len(clusterViolations) > 0 {
+		// If PolicyReport exists -> add new violations and remove violations no longer present
+		updatePolicyReportViolations(currentPolicyReport, clusterViolations, data.ClusterInfo, dynamicClient)
+	} else if currentPolicyReport.GetName() != "" && len(clusterViolations) == 0 {
+		// If PolicyReport no longer has violations -> delete PolicyReport for cluster
+		deletePolicyReport(data.ClusterInfo, dynamicClient)
 	}
 }
 
@@ -238,5 +239,11 @@ func deletePolicyReport(clusterInfo types.ManagedClusterInfo, dynamicClient dyna
 			clusterInfo.Namespace,
 			clusterInfo.ClusterID,
 		)
+	}
+}
+
+func (p *Processor) ProcessPolicyReports(input chan types.ProcessorData, dynamicClient dynamic.Interface) {
+	for {
+		p.createUpdatePolicyReports(input, dynamicClient)
 	}
 }
