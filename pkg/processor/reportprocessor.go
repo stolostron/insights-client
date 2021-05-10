@@ -112,9 +112,6 @@ func (p *Processor) createUpdatePolicyReports(input chan types.ProcessorData, dy
 		data.Reports.Reports,
 		data.ClusterInfo,
 	)
-	if len(clusterViolations) == 0 {
-		glog.Info("No violations to report at present. Cluster is healthy")
-	}
 
 	if currentPolicyReport.GetName() == "" && len(clusterViolations) > 0 {
 		// If PolicyReport does not exist for cluster -> create it ONLY if there are violations
