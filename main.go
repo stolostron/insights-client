@@ -70,7 +70,7 @@ func main() {
 
 	processor := processor.NewProcessor()
 	dynamicClient := config.GetDynamicClient()
-	go processor.CreateUpdatePolicyReports(fetchPolicyReports, dynamicClient)
+	go processor.ProcessPolicyReports(fetchPolicyReports, dynamicClient)
 
 	refreshToken := true
 	if config.Cfg.CCXToken != "" {
