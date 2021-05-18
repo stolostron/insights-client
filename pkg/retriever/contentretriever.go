@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/dynamic"
 )
 
 // ContentsMap contains all policy data
@@ -28,8 +29,11 @@ var ContentsMap map[string]map[string]interface{}
 var lock = sync.RWMutex{}
 
 // InitializeContents ...
-func (r *Retriever) InitializeContents(hubID string) int {
-	return r.retrieveCCXContent(hubID)
+func (r *Retriever) InitializeContents(hubID string, dynamicClient dynamic.Interface) int {
+	contentLength := r.retrieveCCXContent(hubID)
+	// create a configmap containing insight content data
+	r.CreateInsightContentConfigmap(dynamicClient)
+	return contentLength
 }
 
 // Function to make a GET HTTP call to get all the contents for reports
@@ -114,15 +118,12 @@ func (r *Retriever) CreateContents(responseBody types.ContentsResponse) {
 			lock.Unlock()
 		}
 	}
-
-	// create a configmap containing insight content data
-	r.CreateInsightContentConfigmap()
 }
 
 // CreateInsightContentConfigmap Creates a configmap to store content data in open-cluster-management namespace
-func (r *Retriever) CreateInsightContentConfigmap() {
-	dynamicClient := config.GetDynamicClient()
+func (r *Retriever) CreateInsightContentConfigmap(dynamicClient dynamic.Interface) {
 	var configMapData = make(map[string]string)
+	podNS := config.Cfg.PodNamespace
 	var configmapGvr = schema.GroupVersionResource{
 		Version:  "v1",
 		Resource: "configmaps",
@@ -138,7 +139,7 @@ func (r *Retriever) CreateInsightContentConfigmap() {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "insight-content-data",
-			Namespace: "open-cluster-management",
+			Namespace: podNS,
 		},
 		Data: configMapData,
 	}
@@ -148,7 +149,7 @@ func (r *Retriever) CreateInsightContentConfigmap() {
 	}
 	obj := &unstructured.Unstructured{Object: cmUnstructured}
 
-	configmapRes, _ := dynamicClient.Resource(configmapGvr).Namespace("open-cluster-management").Get(
+	configmapRes, _ := dynamicClient.Resource(configmapGvr).Namespace(podNS).Get(
 		context.TODO(),
 		"insight-content-data",
 		metav1.GetOptions{},
@@ -156,13 +157,13 @@ func (r *Retriever) CreateInsightContentConfigmap() {
 	
 	var err error
 	if configmapRes != nil {
-		_, err = dynamicClient.Resource(configmapGvr).Namespace("open-cluster-management").Update(
+		_, err = dynamicClient.Resource(configmapGvr).Namespace(podNS).Update(
 			context.TODO(),
 			obj,
 			metav1.UpdateOptions{},
 		)
 	} else {
-		_, err = dynamicClient.Resource(configmapGvr).Namespace("open-cluster-management").Create(
+		_, err = dynamicClient.Resource(configmapGvr).Namespace(podNS).Create(
 			context.TODO(),
 			obj,
 			metav1.CreateOptions{},

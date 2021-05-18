@@ -34,6 +34,7 @@ func main() {
 		glog.Info("Built from git commit: ", commit)
 	}
 
+	dynamicClient := config.GetDynamicClient()
 	fetchClusterIDs := make(chan types.ManagedClusterInfo)
 	fetchPolicyReports := make(chan types.ProcessorData)
 
@@ -56,12 +57,12 @@ func main() {
 	}
 
 	// Wait until we can create the contents map , which will be used to lookup report details
-	contents := ret.InitializeContents(hubID)
+	contents := ret.InitializeContents(hubID, dynamicClient)
 	retryCount := 1
 	for contents < 0 {
 		glog.Info("Contents Map not ready. Retrying.")
 		time.Sleep(time.Duration(min(300, retryCount*2)) * time.Second)
-		contents = ret.InitializeContents(hubID)
+		contents = ret.InitializeContents(hubID, dynamicClient)
 		retryCount++
 	}
 
@@ -69,7 +70,6 @@ func main() {
 	go ret.RetrieveCCXReport(hubID, fetchClusterIDs, fetchPolicyReports)
 
 	processor := processor.NewProcessor()
-	dynamicClient := config.GetDynamicClient()
 	go processor.ProcessPolicyReports(fetchPolicyReports, dynamicClient)
 
 	refreshToken := true

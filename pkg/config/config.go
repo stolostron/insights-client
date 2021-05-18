@@ -17,6 +17,7 @@ const (
 	DEFAULT_CCX_SERVER       = "http://localhost:8080/api/v1/clusters" // For local use only
 	DEFAULT_POLL_INTERVAL    = 30                                      // 30mins default polling interval cloud.redhat.com
 	DEFAULT_REQUEST_INTERVAL = 1                                       // 1 second Interval between 2 consecutive requests
+	DEFAULT_POD_NAMESPACE    = "kube-system"                           // Namespace of insights-client pod
 )
 
 // Config - Define a config type to hold our config properties.
@@ -26,9 +27,10 @@ type Config struct {
 	CCXServer       string `env:"CCX_SERVER"`
 	KubeConfig      string `env:"KUBECONFIG"`       // Local kubeconfig path
 	CCXToken        string `env:"CCX_TOKEN"`        // Token to access CCX server , when pull-secret cannot be used
-	PollInterval    int    `env:"POLL_INTERVAL"`    // Pollig interval to reports from cloud.redhat.com
+	PollInterval    int    `env:"POLL_INTERVAL"`    // Polling interval to reports from cloud.redhat.com
 	RequestInterval int    `env:"REQUEST_INTERVAL"` // Interval between 2 consequent requests
 	CACert          string `env:"CACert"`           // base64 encoded caCert used for dev & test
+	PodNamespace    string `env:"POD_NAMESPACE"`    // Namespace of insights-client pod
 }
 
 // Cfg service configuration
@@ -43,6 +45,7 @@ func init() {
 	setDefault(&Cfg.CCXServer, "CCX_SERVER", DEFAULT_CCX_SERVER)
 	setDefault(&Cfg.CCXToken, "CCX_TOKEN", "")
 	setDefault(&Cfg.CACert, "CACert", "")
+	setDefault(&Cfg.PodNamespace, "POD_NAMESPACE", DEFAULT_POD_NAMESPACE)
 	setDefaultInt(&Cfg.HTTPTimeout, "HTTP_TIMEOUT", DEFAULT_HTTP_TIMEOUT)
 	setDefaultInt(&Cfg.PollInterval, "POLL_INTERVAL", DEFAULT_POLL_INTERVAL)
 	setDefaultInt(&Cfg.RequestInterval, "REQUEST_INTERVAL", DEFAULT_REQUEST_INTERVAL)
