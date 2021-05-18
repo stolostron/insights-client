@@ -62,8 +62,6 @@ func getPolicyReportResults(
 						"created_at": contentData.PublishDate,
 						// *** total_risk is not currently included in content data, but being added by CCX team.
 						"total_risk": strconv.Itoa(contentData.Likelihood),
-						"reason":     contentData.Reason,     // Need to figure out where to store this value outside of the PR
-						"resolution": contentData.Resolution, // Need to figure out where to store this value outside of the PR
 						"component":  report.Component,
 						// TODO Need to store extra data here for templating changes in UI
 					},
@@ -89,7 +87,7 @@ func (p *Processor) createUpdatePolicyReports(input chan types.ProcessorData, dy
 		glog.Info("Missing managed cluster ID and/or Namespace nothing to process")
 		return
 	}
-	glog.Info("Managed cluster ID and/or Namespace present in data")
+
 	currentPolicyReport := v1alpha2.PolicyReport{}
 	policyReportRes, _ := dynamicClient.Resource(policyReportGvr).Namespace(data.ClusterInfo.Namespace).Get(
 		context.TODO(),

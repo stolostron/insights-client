@@ -13,10 +13,40 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/open-cluster-management/insights-client/pkg/types"
+	"github.com/open-cluster-management/insights-client/pkg/config"
+
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/api/core/v1"
 )
 
+// ContentsMap contains all policy data
 var ContentsMap map[string]map[string]interface{}
 var lock = sync.RWMutex{}
+
+// InitializeContents ...
+func (r *Retriever) InitializeContents(hubID string) int {
+	return r.retrieveCCXContent(hubID)
+}
+
+// Function to make a GET HTTP call to get all the contents for reports
+func (r *Retriever) retrieveCCXContent(hubID string) int {
+	req, err := r.GetContentRequest(context.TODO(), hubID)
+	if err != nil {
+		glog.Warningf("Error creating HttpRequest with endpoint %s, %v", r.ContentURL, err)
+		return -1
+	}
+	contents, err := r.CallContents(req)
+	if err != nil {
+		glog.Warningf("Error calling for contents %s, %v", hubID, err)
+		return -1
+	}
+	r.CreateContents(contents)
+	return len(ContentsMap)
+}
 
 // GetContentRequest - Creates GET request for contents
 func (r *Retriever) GetContentRequest(ctx context.Context, hubID string) (*http.Request, error) {
@@ -60,28 +90,7 @@ func (r *Retriever) CallContents(req *http.Request) (types.ContentsResponse, err
 	return responseBody, err
 }
 
-// Function to make a GET HTTP call to get all the contents for reports
-func (r *Retriever) retrieveCCXContent(hubID string) int {
-	req, err := r.GetContentRequest(context.TODO(), hubID)
-	if err != nil {
-		glog.Warningf("Error creating HttpRequest with endpoint %s, %v", r.ContentURL, err)
-		return -1
-	}
-	contents, err := r.CallContents(req)
-	if err != nil {
-		glog.Warningf("Error calling for contents %s, %v", hubID, err)
-		return -1
-	}
-	r.CreateContents(contents)
-	return len(ContentsMap)
-}
-
-// InitializeContents ...
-func (r *Retriever) InitializeContents(hubID string) int {
-	return r.retrieveCCXContent(hubID)
-}
-
-// Populate json response from /contents call onto a Map to quick lookup
+// CreateContents - Populate json response from /contents call onto a Map to quick lookup
 func (r *Retriever) CreateContents(responseBody types.ContentsResponse) {
 	glog.Infof("Creating Contents from json ")
 	ContentsMap = make(map[string]map[string]interface{})
@@ -104,6 +113,71 @@ func (r *Retriever) CreateContents(responseBody types.ContentsResponse) {
 			ContentsMap[errorName] = errorMap
 			lock.Unlock()
 		}
+	}
+
+	// create a configmap containing insight content data
+	r.CreateInsightContentConfigmap()
+}
+
+// CreateInsightContentConfigmap Creates a configmap to store content data in open-cluster-management namespace
+func (r *Retriever) CreateInsightContentConfigmap() {
+	dynamicClient := config.GetDynamicClient()
+	var configMapData = make(map[string]string)
+	var configmapGvr = schema.GroupVersionResource{
+		Version:  "v1",
+		Resource: "configmaps",
+	}
+	for policy := range ContentsMap {
+		jsonStr, _ := json.Marshal(ContentsMap[policy])
+		configMapData[policy] = string(jsonStr)
+	}
+	configmap := &v1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ConfigMap",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "insight-content-data",
+			Namespace: "open-cluster-management",
+		},
+		Data: configMapData,
+	}
+	cmUnstructured, unstructuredErr := runtime.DefaultUnstructuredConverter.ToUnstructured(configmap)
+	if unstructuredErr != nil {
+		glog.Warningf("Error converting to unstructured.Unstructured: %s", unstructuredErr)
+	}
+	obj := &unstructured.Unstructured{Object: cmUnstructured}
+
+	configmapRes, _ := dynamicClient.Resource(configmapGvr).Namespace("open-cluster-management").Get(
+		context.TODO(),
+		"insight-content-data",
+		metav1.GetOptions{},
+	)
+	
+	var err error
+	if configmapRes != nil {
+		_, err = dynamicClient.Resource(configmapGvr).Namespace("open-cluster-management").Update(
+			context.TODO(),
+			obj,
+			metav1.UpdateOptions{},
+		)
+	} else {
+		_, err = dynamicClient.Resource(configmapGvr).Namespace("open-cluster-management").Create(
+			context.TODO(),
+			obj,
+			metav1.CreateOptions{},
+		)
+	}
+
+	if err != nil {
+		glog.Infof(
+			"Error while creating or updating ConfigMap: insight-content-data. Error: %v",
+			err,
+		)
+	} else {
+		glog.Infof(
+			"Successfully stored Insight content data in ConfigMap: insight-content-data",
+		)
 	}
 }
 
