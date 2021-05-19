@@ -12,9 +12,14 @@ import (
 
 	"github.com/open-cluster-management/insights-client/pkg/monitor"
 	mocks "github.com/open-cluster-management/insights-client/pkg/utils"
+	"github.com/open-cluster-management/insights-client/pkg/types"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/open-cluster-management/insights-client/pkg/types"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	dynamicfakeclient "k8s.io/client-go/dynamic/fake"
+	"sigs.k8s.io/wg-policy-prototypes/policy-report/api/v1alpha2"
 )
 
 func TestCallInsights(t *testing.T) {
@@ -58,6 +63,16 @@ func TestCallInsights(t *testing.T) {
 }
 
 func Test_FetchClusters(t *testing.T) {
+	namespace = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "local-cluster",
+		},
+	}
+	scheme := runtime.NewScheme()
+	scheme.AddKnownTypes(corev1.SchemeGroupVersion, &corev1.Namespace{})
+	scheme.AddKnownTypes(v1alpha2.SchemeGroupVersion, &v1alpha2.PolicyReport{})
+	fakeDynamicClient = dynamicfakeclient.NewSimpleDynamicClient(scheme, namespace)
+
 	monitor := monitor.NewClusterMonitor()
 	monitor.ManagedClusterInfo = []types.ManagedClusterInfo{{Namespace: "local-cluster", ClusterID: "323a00cd-428a-49fb-80ab-201d2a5d3050"}}
 
@@ -65,7 +80,7 @@ func Test_FetchClusters(t *testing.T) {
 
 	ret := NewRetriever("testServer", "testContentUrl", nil, "testToken")
 
-	go ret.FetchClusters(monitor, fetchClusterIDs, false)
+	go ret.FetchClusters(monitor, fetchClusterIDs, false, "323a00cd-428a-49fb-80ab-201d2a5d3050", fakeDynamicClient)
 	testData := <-fetchClusterIDs
 
 	assert.Equal(
