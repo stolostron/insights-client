@@ -27,6 +27,11 @@ import (
 // ContentsMap contains all policy data
 var ContentsMap map[string]map[string]interface{}
 var lock = sync.RWMutex{}
+var podNS = config.Cfg.PodNamespace
+var configmapGvr = schema.GroupVersionResource{
+	Version:  "v1",
+	Resource: "configmaps",
+}
 
 // InitializeContents ...
 func (r *Retriever) InitializeContents(hubID string, dynamicClient dynamic.Interface) int {
@@ -120,14 +125,20 @@ func (r *Retriever) CreateContents(responseBody types.ContentsResponse) {
 	}
 }
 
+// GetContentConfigMap ...
+func (r *Retriever) GetContentConfigMap(dynamicClient dynamic.Interface) (*unstructured.Unstructured) {
+	configmapRes, _ := dynamicClient.Resource(configmapGvr).Namespace(podNS).Get(
+		context.TODO(),
+		"insight-content-data",
+		metav1.GetOptions{},
+	)
+
+	return configmapRes
+}
+
 // CreateInsightContentConfigmap Creates a configmap to store content data in open-cluster-management namespace
 func (r *Retriever) CreateInsightContentConfigmap(dynamicClient dynamic.Interface) {
 	var configMapData = make(map[string]string)
-	podNS := config.Cfg.PodNamespace
-	var configmapGvr = schema.GroupVersionResource{
-		Version:  "v1",
-		Resource: "configmaps",
-	}
 	for policy := range ContentsMap {
 		jsonStr, _ := json.Marshal(ContentsMap[policy])
 		configMapData[policy] = string(jsonStr)
@@ -148,12 +159,7 @@ func (r *Retriever) CreateInsightContentConfigmap(dynamicClient dynamic.Interfac
 		glog.Warningf("Error converting to unstructured.Unstructured: %s", unstructuredErr)
 	}
 	obj := &unstructured.Unstructured{Object: cmUnstructured}
-
-	configmapRes, _ := dynamicClient.Resource(configmapGvr).Namespace(podNS).Get(
-		context.TODO(),
-		"insight-content-data",
-		metav1.GetOptions{},
-	)
+	configmapRes := r.GetContentConfigMap(dynamicClient)
 	
 	var err error
 	if configmapRes != nil {
@@ -177,7 +183,8 @@ func (r *Retriever) CreateInsightContentConfigmap(dynamicClient dynamic.Interfac
 		)
 	} else {
 		glog.Infof(
-			"Successfully stored Insight content data in ConfigMap: insight-content-data",
+			"Successfully stored Insight content data in ConfigMap: insight-content-data, on namespace: %s",
+			podNS,
 		)
 	}
 }

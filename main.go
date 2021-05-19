@@ -77,7 +77,7 @@ func main() {
 		refreshToken = false
 	}
 	//start triggering reports for clusters
-	go ret.FetchClusters(monitor, fetchClusterIDs, refreshToken)
+	go ret.FetchClusters(monitor, fetchClusterIDs, refreshToken, hubID, dynamicClient)
 
 	router := mux.NewRouter()
 

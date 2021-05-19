@@ -23,6 +23,7 @@ import (
 	"github.com/open-cluster-management/insights-client/pkg/types"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/dynamic"
 )
 
 // Retriever struct
@@ -267,7 +268,13 @@ func (r *Retriever) GetPolicyInfo(
 }
 
 // FetchClusters forwards the managed clusters to RetrieveCCXReports function
-func (r *Retriever) FetchClusters(monitor *monitor.Monitor, input chan types.ManagedClusterInfo, refreshToken bool) {
+func (r *Retriever) FetchClusters(
+	monitor *monitor.Monitor,
+	input chan types.ManagedClusterInfo,
+	refreshToken bool,
+	hubID string,
+	dynamicClient dynamic.Interface,
+) {
 	ticker := time.NewTicker(monitor.ClusterPollInterval)
 	defer ticker.Stop()
 	for ; true; <-ticker.C {
@@ -276,6 +283,11 @@ func (r *Retriever) FetchClusters(monitor *monitor.Monitor, input chan types.Man
 			if err != nil {
 				glog.Warningf("Unable to get CRC Token, Using previous Token: %v", err)
 			}
+		}
+		if len(ContentsMap) < 1 {
+			r.InitializeContents(hubID, dynamicClient)
+		} else if len(ContentsMap) > 0 && r.GetContentConfigMap(dynamicClient) == nil {
+			r.CreateInsightContentConfigmap(dynamicClient)
 		}
 		if len(monitor.ManagedClusterInfo) > 0 {
 			lock.RLock()
