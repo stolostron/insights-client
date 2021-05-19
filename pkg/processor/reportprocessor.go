@@ -13,6 +13,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/open-cluster-management/insights-client/pkg/retriever"
 	"github.com/open-cluster-management/insights-client/pkg/types"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -137,6 +138,11 @@ func createPolicyReport(
 			Namespace: clusterInfo.Namespace,
 		},
 		Results: clusterViolations,
+		Scope: &corev1.ObjectReference{
+			Kind: "cluster",
+			Name: clusterInfo.Namespace,
+			Namespace: clusterInfo.Namespace,
+		},
 	}
 	prUnstructured, unstructuredErr := runtime.DefaultUnstructuredConverter.ToUnstructured(policyreport)
 	if unstructuredErr != nil {
