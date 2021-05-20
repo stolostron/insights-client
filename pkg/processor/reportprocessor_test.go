@@ -102,7 +102,7 @@ func Test_createPolicyReport(t *testing.T) {
 	createdPolicyReport := &v1alpha2.PolicyReport{}
 
 	//Check if the policyReport is created
-	unstructuredPolR, err := fakeDynamicClient.Resource(policyReportGvr).Namespace(mngd.Namespace).Get(context.TODO(), mngd.Namespace, v1.GetOptions{})
+	unstructuredPolR, err := fakeDynamicClient.Resource(policyReportGvr).Namespace(mngd.Namespace).Get(context.TODO(), mngd.Namespace + "-policyreport", v1.GetOptions{})
 	if err != nil {
 		t.Log(err)
 	}
