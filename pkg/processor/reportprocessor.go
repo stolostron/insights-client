@@ -92,7 +92,7 @@ func (p *Processor) createUpdatePolicyReports(input chan types.ProcessorData, dy
 	currentPolicyReport := v1alpha2.PolicyReport{}
 	policyReportRes, _ := dynamicClient.Resource(policyReportGvr).Namespace(data.ClusterInfo.Namespace).Get(
 		context.TODO(),
-		data.ClusterInfo.Namespace,
+		data.ClusterInfo.Namespace + "-policyreport",
 		metav1.GetOptions{},
 	)
 
@@ -134,7 +134,7 @@ func createPolicyReport(
 			APIVersion: "wgpolicyk8s.io/v1alpha2",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      clusterInfo.Namespace,
+			Name:      clusterInfo.Namespace + "-policyreport",
 			Namespace: clusterInfo.Namespace,
 		},
 		Results: clusterViolations,
@@ -187,7 +187,7 @@ func updatePolicyReportViolations(
 	forcePatch := true
 	successPatchRes, err := dynamicClient.Resource(policyReportGvr).Namespace(clusterInfo.Namespace).Patch(
 		context.TODO(),
-		clusterInfo.Namespace,
+		clusterInfo.Namespace + "-policyreport",
 		k8sTypes.ApplyPatchType,
 		data,
 		metav1.PatchOptions{
@@ -225,7 +225,7 @@ func updatePolicyReportViolations(
 func deletePolicyReport(clusterInfo types.ManagedClusterInfo, dynamicClient dynamic.Interface) {
 	deleteErr := dynamicClient.Resource(policyReportGvr).Namespace(clusterInfo.Namespace).Delete(
 		context.TODO(),
-		clusterInfo.Namespace,
+		clusterInfo.Namespace + "-policyreport",
 		metav1.DeleteOptions{},
 	)
 
@@ -243,6 +243,7 @@ func deletePolicyReport(clusterInfo types.ManagedClusterInfo, dynamicClient dyna
 	}
 }
 
+// ProcessPolicyReports ...
 func (p *Processor) ProcessPolicyReports(input chan types.ProcessorData, dynamicClient dynamic.Interface) {
 	for {
 		p.createUpdatePolicyReports(input, dynamicClient)
