@@ -13,6 +13,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/open-cluster-management/insights-client/pkg/retriever"
 	"github.com/open-cluster-management/insights-client/pkg/types"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -21,6 +22,8 @@ import (
 	"k8s.io/client-go/dynamic"
 	"sigs.k8s.io/wg-policy-prototypes/policy-report/api/v1alpha2"
 )
+
+var prSuffix = "-policyreport"
 
 // Processor struct
 type Processor struct {
@@ -62,8 +65,6 @@ func getPolicyReportResults(
 						"created_at": contentData.PublishDate,
 						// *** total_risk is not currently included in content data, but being added by CCX team.
 						"total_risk": strconv.Itoa(contentData.Likelihood),
-						"reason":     contentData.Reason,     // Need to figure out where to store this value outside of the PR
-						"resolution": contentData.Resolution, // Need to figure out where to store this value outside of the PR
 						"component":  report.Component,
 						// TODO Need to store extra data here for templating changes in UI
 					},
@@ -89,11 +90,11 @@ func (p *Processor) createUpdatePolicyReports(input chan types.ProcessorData, dy
 		glog.Info("Missing managed cluster ID and/or Namespace nothing to process")
 		return
 	}
-	glog.Info("Managed cluster ID and/or Namespace present in data")
+
 	currentPolicyReport := v1alpha2.PolicyReport{}
 	policyReportRes, _ := dynamicClient.Resource(policyReportGvr).Namespace(data.ClusterInfo.Namespace).Get(
 		context.TODO(),
-		data.ClusterInfo.Namespace,
+		data.ClusterInfo.Namespace + prSuffix,
 		metav1.GetOptions{},
 	)
 
@@ -135,10 +136,15 @@ func createPolicyReport(
 			APIVersion: "wgpolicyk8s.io/v1alpha2",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      clusterInfo.Namespace,
+			Name:      clusterInfo.Namespace + prSuffix,
 			Namespace: clusterInfo.Namespace,
 		},
 		Results: clusterViolations,
+		Scope: &corev1.ObjectReference{
+			Kind: "cluster",
+			Name: clusterInfo.Namespace,
+			Namespace: clusterInfo.Namespace,
+		},
 	}
 	prUnstructured, unstructuredErr := runtime.DefaultUnstructuredConverter.ToUnstructured(policyreport)
 	if unstructuredErr != nil {
@@ -183,7 +189,7 @@ func updatePolicyReportViolations(
 	forcePatch := true
 	successPatchRes, err := dynamicClient.Resource(policyReportGvr).Namespace(clusterInfo.Namespace).Patch(
 		context.TODO(),
-		clusterInfo.Namespace,
+		clusterInfo.Namespace + prSuffix,
 		k8sTypes.ApplyPatchType,
 		data,
 		metav1.PatchOptions{
@@ -221,7 +227,7 @@ func updatePolicyReportViolations(
 func deletePolicyReport(clusterInfo types.ManagedClusterInfo, dynamicClient dynamic.Interface) {
 	deleteErr := dynamicClient.Resource(policyReportGvr).Namespace(clusterInfo.Namespace).Delete(
 		context.TODO(),
-		clusterInfo.Namespace,
+		clusterInfo.Namespace + prSuffix,
 		metav1.DeleteOptions{},
 	)
 
@@ -239,6 +245,7 @@ func deletePolicyReport(clusterInfo types.ManagedClusterInfo, dynamicClient dyna
 	}
 }
 
+// ProcessPolicyReports ...
 func (p *Processor) ProcessPolicyReports(input chan types.ProcessorData, dynamicClient dynamic.Interface) {
 	for {
 		p.createUpdatePolicyReports(input, dynamicClient)

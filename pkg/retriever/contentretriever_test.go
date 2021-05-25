@@ -9,9 +9,27 @@ import (
 	"testing"
 
 	mocks "github.com/open-cluster-management/insights-client/pkg/utils"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	dynamicfakeclient "k8s.io/client-go/dynamic/fake"
 )
 
+var fakeDynamicClient *dynamicfakeclient.FakeDynamicClient
+var namespace *corev1.Namespace
+
 func TestCallContents(t *testing.T) {
+	namespace = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "open-cluster-management",
+		},
+	}
+	scheme := runtime.NewScheme()
+	scheme.AddKnownTypes(corev1.SchemeGroupVersion, &corev1.Namespace{})
+	scheme.AddKnownTypes(corev1.SchemeGroupVersion, &corev1.ConfigMap{})
+	fakeDynamicClient = dynamicfakeclient.NewSimpleDynamicClient(scheme, namespace)
+
 	postFunc := func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		response := mocks.GetMockContent()
@@ -34,7 +52,7 @@ func TestCallContents(t *testing.T) {
 	if len(response.Content) != 42 {
 		t.Errorf("Unexpected Report length %d", len(response.Content))
 	}
-	ret.InitializeContents("34c3ecc5-624a-49a5-bab8-4fdc5e51a266")
+	ret.InitializeContents("34c3ecc5-624a-49a5-bab8-4fdc5e51a266", fakeDynamicClient)
 
 	if len(ret.GetFields("TUTORIAL_ERROR")) != 12 {
 		t.Error("RetrieveCCXContent  did not create all fields, expected 11 actual  ", len(ret.GetFields("TUTORIAL_ERROR")))
