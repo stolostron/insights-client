@@ -104,10 +104,10 @@ func (r *Retriever) StartTokenRefresh() error {
 	if err != nil {
 		if errors.IsNotFound(err) {
 			glog.V(2).Infof("pull-secret does not exist")
-			err = nil
+			err = fmt.Errorf("pull-secret does not exist in openshift-config namespace: %v", err)
 		} else if errors.IsForbidden(err) {
 			glog.V(2).Infof("Operator does not have permission to check pull-secret: %v", err)
-			err = nil
+			err = fmt.Errorf("Operator does not have permission to check pull-secret: %v", err)
 		} else {
 			err = fmt.Errorf("could not check pull-secret: %v", err)
 		}
@@ -118,20 +118,29 @@ func (r *Retriever) StartTokenRefresh() error {
 			var pullSecret serializedAuthMap
 			if err := json.Unmarshal(data, &pullSecret); err != nil {
 				glog.Errorf("Unable to unmarshal cluster pull-secret: %v", err)
+				err = fmt.Errorf("Unable to unmarshal cluster pull-secret: %v", err)
+				return err
 			}
 			if auth, ok := pullSecret.Auths["cloud.openshift.com"]; ok {
 				token := strings.TrimSpace(auth.Auth)
 				if strings.Contains(token, "\n") || strings.Contains(token, "\r") {
-					return fmt.Errorf("cluster authorization token is not valid: contains newlines")
+					return fmt.Errorf("Cluster authorization token is not valid: contains newlines")
 				}
 				if len(token) > 0 {
 					glog.V(2).Info("Found cloud.openshift.com token ")
 					r.Token = "Bearer " + token
+					return nil
 				}
+			} else {
+				return fmt.Errorf("cloud.openshift.com token is not found")
 			}
+		} else {
+			return fmt.Errorf(".dockerconfigjson token is not found")
 		}
+	} else {
+		return fmt.Errorf("Could not get pull-secret")
 	}
-	return nil
+	return fmt.Errorf("Unknown error during TokenRefresh")
 }
 
 // RetrieveCCXReport ...
