@@ -87,7 +87,7 @@ func (r *Retriever) CallContents(req *http.Request) (types.ContentsResponse, err
 	if res.StatusCode != 200 {
 		glog.Warningf("Unsucessful response during contents GET - response code %d", res.StatusCode)
 		glog.V(2).Infof("Contents statuscode %v", res.Status)
-		glog.V(3).Infof("Contents responseBody%v", res.Body)
+		glog.V(3).Infof("Contents responseBody %v", res.Body)
 		glog.V(3).Infof("Contents request %v", res.Request)
 		return types.ContentsResponse{}, e.New("No Success HTTP Response code ")
 	}
