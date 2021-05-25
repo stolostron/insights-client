@@ -13,6 +13,7 @@ import (
 	e "errors"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -23,6 +24,7 @@ import (
 	"github.com/open-cluster-management/insights-client/pkg/types"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	knet "k8s.io/apimachinery/pkg/util/net"
 	"k8s.io/client-go/dynamic"
 )
 
@@ -45,9 +47,17 @@ type serializedAuth struct {
 func NewRetriever(ccxurl string, ContentURL string, client *http.Client,
 	token string) *Retriever {
 	if client == nil {
+		clientTransport := &http.Transport{
+			Proxy: knet.NewProxierWithNoProxyCIDR(http.ProxyFromEnvironment),
+			DialContext: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}).DialContext,
+			TLSHandshakeTimeout: 10 * time.Second,
+			DisableKeepAlives:   true,
+		}
 		if config.Cfg.CACert != "" {
 			// If caCert is defiend in Insights-client deployment - we need to use it in http client
-			// This will be used only for dev & testing purposes to use qaprodauth.cloud.redhat.com
 			decodedCert, err := b64.URLEncoding.DecodeString(config.Cfg.CACert)
 			if err != nil {
 				// Exit because this is an unrecoverable configuration problem.
@@ -60,15 +70,9 @@ func NewRetriever(ccxurl string, ContentURL string, client *http.Client,
 				MinVersion: tls.VersionTLS12,
 				RootCAs:    caCertPool,
 			}
-
-			tr := &http.Transport{
-				TLSClientConfig: tlsCfg,
-			}
-
-			client = &http.Client{Transport: tr}
-		} else {
-			client = &http.Client{}
+			clientTransport.TLSClientConfig = tlsCfg
 		}
+		client = &http.Client{Transport: clientTransport}
 	}
 	r := &Retriever{
 		Client:     client,
@@ -100,10 +104,10 @@ func (r *Retriever) StartTokenRefresh() error {
 	if err != nil {
 		if errors.IsNotFound(err) {
 			glog.V(2).Infof("pull-secret does not exist")
-			err = nil
+			err = fmt.Errorf("pull-secret does not exist in openshift-config namespace: %v", err)
 		} else if errors.IsForbidden(err) {
 			glog.V(2).Infof("Operator does not have permission to check pull-secret: %v", err)
-			err = nil
+			err = fmt.Errorf("Operator does not have permission to check pull-secret: %v", err)
 		} else {
 			err = fmt.Errorf("could not check pull-secret: %v", err)
 		}
@@ -114,20 +118,29 @@ func (r *Retriever) StartTokenRefresh() error {
 			var pullSecret serializedAuthMap
 			if err := json.Unmarshal(data, &pullSecret); err != nil {
 				glog.Errorf("Unable to unmarshal cluster pull-secret: %v", err)
+				err = fmt.Errorf("Unable to unmarshal cluster pull-secret: %v", err)
+				return err
 			}
 			if auth, ok := pullSecret.Auths["cloud.openshift.com"]; ok {
 				token := strings.TrimSpace(auth.Auth)
 				if strings.Contains(token, "\n") || strings.Contains(token, "\r") {
-					return fmt.Errorf("cluster authorization token is not valid: contains newlines")
+					return fmt.Errorf("Cluster authorization token is not valid: contains newlines")
 				}
 				if len(token) > 0 {
 					glog.V(2).Info("Found cloud.openshift.com token ")
 					r.Token = "Bearer " + token
+					return nil
 				}
+			} else {
+				return fmt.Errorf("cloud.openshift.com token is not found")
 			}
+		} else {
+			return fmt.Errorf(".dockerconfigjson token is not found")
 		}
+	} else {
+		return fmt.Errorf("Could not get pull-secret")
 	}
-	return nil
+	return fmt.Errorf("Unknown error during TokenRefresh")
 }
 
 // RetrieveCCXReport ...
@@ -151,7 +164,7 @@ func (r *Retriever) RetrieveCCXReport(
 		}
 		response, err := r.CallInsights(req, cluster)
 		if err != nil {
-			glog.Warningf("Error sending HttpRequest for cluster %s (%s), %v", cluster.Namespace, cluster.ClusterID, err)
+			glog.Warningf("Error getting good Response for cluster %s (%s), %v", cluster.Namespace, cluster.ClusterID, err)
 			continue
 		}
 
@@ -200,7 +213,7 @@ func (r *Retriever) CreateInsightsRequest(
 
 // CallInsights ...
 func (r *Retriever) CallInsights(req *http.Request, cluster types.ManagedClusterInfo) (types.ResponseBody, error) {
-	glog.Infof("Calling Insights for cluster %s (%s)", cluster.Namespace, cluster.ClusterID)
+	glog.V(2).Infof("Starting CallInsights for cluster %s (%s)", cluster.Namespace, cluster.ClusterID)
 	var responseBody types.ResponseBody
 	res, err := r.Client.Do(req)
 	if err != nil {
@@ -214,6 +227,15 @@ func (r *Retriever) CallInsights(req *http.Request, cluster types.ManagedCluster
 			cluster.ClusterID,
 			res.StatusCode,
 		)
+		if res.StatusCode == 400 {
+			glog.Infof("Check OCM Console - cluster should be registered in CCX server %v", cluster.ClusterID)
+		}
+		if res.StatusCode == 401 {
+			glog.Infof("Check OCM Console - Hub cluster and managed cluster should be reqistered with IDs from Same Org %v", cluster.ClusterID)
+		}
+		glog.V(2).Infof("Response status for report %v", res.Status)
+		glog.V(3).Infof("Response body for report  %v", req.Body)
+		glog.V(3).Infof("Response header for report %v", req.Header)
 		return types.ResponseBody{}, e.New("No Success HTTP Response code ")
 	}
 	defer res.Body.Close()
@@ -232,11 +254,12 @@ func (r *Retriever) GetPolicyInfo(
 	responseBody types.ResponseBody,
 	cluster types.ManagedClusterInfo,
 ) (types.ProcessorData, error) {
-	glog.Infof("Creating Policy Info for cluster %s (%s)", cluster.Namespace, cluster.ClusterID)
+	glog.V(2).Infof("Starting GetPolicyInfo for cluster %s (%s)", cluster.Namespace, cluster.ClusterID)
 	reports := types.Reports{}
 	for _, clusterErrored := range responseBody.Errors {
-        glog.Warningf("Error occured while requesting Insights for cluster: %s", clusterErrored)
-    }
+		glog.Warningf("No Reports returned from CCX Insights for cluster: %s", clusterErrored)
+		glog.V(2).Infof("Errors returned from CCX Insights for cluster : %v", responseBody)
+	}
 
 	// loop through the clusters in the response and pull out the report violations
 	for reportClusterID := range responseBody.Reports {

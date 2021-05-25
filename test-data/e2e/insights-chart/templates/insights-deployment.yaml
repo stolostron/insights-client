@@ -89,6 +89,10 @@ spec:
           value: "{{ INSIGHTS_CLIENT_CCX_TOKEN }}"  
         - name: CCX_SERVER
           value: "https://cloud.redhat.com/api/insights-results-aggregator/v1"
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
         resources:
           limits:
             memory: 512Mi
