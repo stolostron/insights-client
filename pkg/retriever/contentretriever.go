@@ -137,7 +137,7 @@ func (r *Retriever) GetContentConfigMap(dynamicClient dynamic.Interface) (*unstr
 	)
 
 	if err != nil {
-		glog.Infof(
+		glog.V(2).Infof(
 			"Error getting ConfigMap: insight-content-data. Error: %v",
 			err,
 		)

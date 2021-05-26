@@ -163,7 +163,7 @@ func createPolicyReport(
 
 	if err != nil {
 		glog.Infof(
-			"Error creating PolicyReport for cluster %s (%s): %v",
+			"Could not create PolicyReport for cluster %s (%s): %v",
 			clusterInfo.Namespace,
 			clusterInfo.ClusterID,
 			err,
