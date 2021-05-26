@@ -130,18 +130,11 @@ func (r *Retriever) CreateContents(responseBody types.ContentsResponse) {
 
 // GetContentConfigMap ...
 func (r *Retriever) GetContentConfigMap(dynamicClient dynamic.Interface) (*unstructured.Unstructured) {
-	configmapRes, err := dynamicClient.Resource(configmapGvr).Namespace(podNS).Get(
+	configmapRes, _ := dynamicClient.Resource(configmapGvr).Namespace(podNS).Get(
 		context.TODO(),
 		"insight-content-data",
 		metav1.GetOptions{},
 	)
-
-	if err != nil {
-		glog.Infof(
-			"Error getting ConfigMap: insight-content-data. Error: %v",
-			err,
-		)
-	}
 
 	return configmapRes
 }
