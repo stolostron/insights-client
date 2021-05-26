@@ -49,6 +49,9 @@ func getPolicyReportResults(
 	for _, report := range reports {
 		// Find the correct Insight content data from cache
 		reportContentData := retriever.ContentsMap[report.Key]
+		// Convert details data to string
+		jsonStr, _ := json.Marshal(report.Details)
+		extraData := string(jsonStr)
 		if reportContentData != nil && !strings.Contains(report.RuleID, "ccx_rules_ocm.tutorial_rule") {
 			var contentData types.FormattedContentData
 			reportContentDataBytes, _ := json.Marshal(reportContentData)
@@ -66,7 +69,7 @@ func getPolicyReportResults(
 						// *** total_risk is not currently included in content data, but being added by CCX team.
 						"total_risk": strconv.Itoa(contentData.Likelihood),
 						"component":  report.Component,
-						// TODO Need to store extra data here for templating changes in UI
+						"extra_data": extraData,
 					},
 				})
 			} else {
