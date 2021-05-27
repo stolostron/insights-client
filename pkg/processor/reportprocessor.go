@@ -126,12 +126,23 @@ func (p *Processor) createUpdatePolicyReports(input chan types.ProcessorData, dy
 	} else if currentPolicyReport.GetName() != "" && len(clusterViolations) == 0 {
 		// If PolicyReport no longer has violations -> delete PolicyReport for cluster
 		deletePolicyReport(data.ClusterInfo, dynamicClient)
+	} else if currentPolicyReport.GetName() == "" && len(clusterViolations) == 0 {
+		glog.Infof(
+			"Cluster %s (%s) is healthy skipping PolicyReport creation for this cluster as there are no violations to process.",
+			data.ClusterInfo.Namespace,
+			data.ClusterInfo.ClusterID,
+		)
 	}
 }
 
 func createPolicyReport(
 	clusterViolations []*v1alpha2.PolicyReportResult,
 	clusterInfo types.ManagedClusterInfo, dynamicClient dynamic.Interface) {
+	glog.V(2).Infof(
+		"Stating createPolicyReport for cluster %s (%s)",
+		clusterInfo.Namespace,
+		clusterInfo.ClusterID,
+	)
 	// PolicyReport doesnt exist for cluster - creating
 	policyreport := &v1alpha2.PolicyReport{
 		TypeMeta: metav1.TypeMeta{
@@ -181,6 +192,11 @@ func updatePolicyReportViolations(
 	currentPolicyReport v1alpha2.PolicyReport,
 	clusterViolations []*v1alpha2.PolicyReportResult,
 	clusterInfo types.ManagedClusterInfo, dynamicClient dynamic.Interface) {
+	glog.V(2).Infof(
+		"Stating updatePolicyReportViolations for cluster %s (%s)",
+		clusterInfo.Namespace,
+		clusterInfo.ClusterID,
+	)
 	// merge existing PolicyReport results with new results
 	currentPolicyReport.Results = clusterViolations
 	currentPolicyReport.SetManagedFields(nil)
@@ -228,6 +244,11 @@ func updatePolicyReportViolations(
 }
 
 func deletePolicyReport(clusterInfo types.ManagedClusterInfo, dynamicClient dynamic.Interface) {
+	glog.V(2).Infof(
+		"Stating deletePolicyReport for cluster %s (%s)",
+		clusterInfo.Namespace,
+		clusterInfo.ClusterID,
+	)
 	deleteErr := dynamicClient.Resource(policyReportGvr).Namespace(clusterInfo.Namespace).Delete(
 		context.TODO(),
 		clusterInfo.Namespace + prSuffix,

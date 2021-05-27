@@ -246,6 +246,7 @@ func (r *Retriever) CallInsights(req *http.Request, cluster types.ManagedCluster
 		glog.Errorf("Error unmarshalling ResponseBody %v", unmarshalError)
 		return types.ResponseBody{}, unmarshalError
 	}
+	glog.V(2).Info("Successfully called insights. Returning the response body.")
 	return responseBody, err
 }
 
@@ -278,6 +279,11 @@ func (r *Retriever) GetPolicyInfo(
 				return types.ProcessorData{}, unmarshalError
 			}
 
+			glog.V(2).Infof(
+				"Successfully requested report for cluster %s (%s). Proceeding to processor.",
+				cluster.Namespace,
+				cluster.ClusterID,
+			)
 			return types.ProcessorData{
 				ClusterInfo: cluster,
 				Reports:     reports,
