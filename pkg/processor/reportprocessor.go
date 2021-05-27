@@ -128,7 +128,7 @@ func (p *Processor) createUpdatePolicyReports(input chan types.ProcessorData, dy
 		deletePolicyReport(data.ClusterInfo, dynamicClient)
 	} else if currentPolicyReport.GetName() == "" && len(clusterViolations) == 0 {
 		glog.Infof(
-			"Cluster %s (%s) is healthy skipping PolicyReport creation for this cluster as there are no violations to process.",
+			"Cluster %s (%s) is healthy. Skipping PolicyReport creation for this cluster as there are no violations to process.",
 			data.ClusterInfo.Namespace,
 			data.ClusterInfo.ClusterID,
 		)
@@ -139,7 +139,7 @@ func createPolicyReport(
 	clusterViolations []*v1alpha2.PolicyReportResult,
 	clusterInfo types.ManagedClusterInfo, dynamicClient dynamic.Interface) {
 	glog.V(2).Infof(
-		"Stating createPolicyReport for cluster %s (%s)",
+		"Starting createPolicyReport for cluster %s (%s)",
 		clusterInfo.Namespace,
 		clusterInfo.ClusterID,
 	)
@@ -193,7 +193,7 @@ func updatePolicyReportViolations(
 	clusterViolations []*v1alpha2.PolicyReportResult,
 	clusterInfo types.ManagedClusterInfo, dynamicClient dynamic.Interface) {
 	glog.V(2).Infof(
-		"Stating updatePolicyReportViolations for cluster %s (%s)",
+		"Starting updatePolicyReportViolations for cluster %s (%s)",
 		clusterInfo.Namespace,
 		clusterInfo.ClusterID,
 	)
@@ -245,7 +245,7 @@ func updatePolicyReportViolations(
 
 func deletePolicyReport(clusterInfo types.ManagedClusterInfo, dynamicClient dynamic.Interface) {
 	glog.V(2).Infof(
-		"Stating deletePolicyReport for cluster %s (%s)",
+		"Starting deletePolicyReport for cluster %s (%s)",
 		clusterInfo.Namespace,
 		clusterInfo.ClusterID,
 	)
