@@ -196,14 +196,17 @@ func (m *Monitor) updateCluster(managedCluster *clusterv1.ManagedCluster) {
 	glog.V(2).Info("Processing Cluster Update.")
 
 	clusterToUpdate := managedCluster.GetName()
+	if clusterToUpdate == "local-cluster" {
+		// We get local-clsuter ID from clusterversion resource.
+		// Dont update the clusterID here as it can be undefined.
+		return
+	}
+
 	clusterVendor, version, clusterID := GetClusterClaimInfo(managedCluster)
 	clusterIdx, found := Find(m.ManagedClusterInfo, types.ManagedClusterInfo{
 		Namespace: clusterToUpdate,
 		ClusterID: clusterID,
 	})
-	if clusterToUpdate == "local-cluster" {
-		return
-	}
 	if found && clusterID != m.ManagedClusterInfo[clusterIdx].ClusterID {
 		// If the cluster ID has changed update it - otherwise do nothing.
 		glog.Infof("Updating %s from Insights cluster list", clusterToUpdate)
@@ -237,7 +240,7 @@ func (m *Monitor) deleteCluster(managedCluster *clusterv1.ManagedCluster) {
 	}
 }
 
-// AddLocalCluster - adds cluster to Clusters list
+// AddLocalCluster - adds local cluster to Clusters list
 func (m *Monitor) AddLocalCluster(versionObj *unstructured.Unstructured) bool {
 	var clusterVersionGvr = schema.GroupVersionResource{
 		Group:    "config.openshift.io",
