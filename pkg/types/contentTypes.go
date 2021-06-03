@@ -40,7 +40,7 @@ type FormattedContentData struct {
 	Description  string   `json:"description"`
 	Impact       string   `json:"impact"`
 	Likelihood   int      `json:"likelihood"`
-	// TotalRisk    int      `json:"total_risk"`
+	TotalRisk    int      `json:"total_risk"`
 	PublishDate  string   `json:"publish_date"`
 	Status       string   `json:"status"`
 	Tags         []string `json:"tags"`
