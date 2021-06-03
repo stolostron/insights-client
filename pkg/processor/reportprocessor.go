@@ -66,8 +66,7 @@ func getPolicyReportResults(
 					Result:      "fail",
 					Properties: map[string]string{
 						"created_at": contentData.PublishDate,
-						// *** total_risk is not currently included in content data, but being added by CCX team.
-						"total_risk": strconv.Itoa(contentData.Likelihood),
+						"total_risk": strconv.Itoa(contentData.TotalRisk),
 						"component":  report.Component,
 						"extra_data": extraData,
 					},
