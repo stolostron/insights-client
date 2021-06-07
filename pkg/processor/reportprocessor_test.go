@@ -119,3 +119,10 @@ func Test_createPolicyReport(t *testing.T) {
 	assert.Nil(t, unstructConvErr, "Expected policy report to be properly formatted. Got error: %v", unstructConvErr)
 	assert.Equal(t, len(createdPolicyReport.Results), 2, "Expected 2 issues to be found. Got %v", len(createdPolicyReport.Results))
 }
+
+func Test_filterOpenshiftCategory(t *testing.T) {
+	categories := []string{"test1", "openshift", "test2"}
+	filtered := FilterOpenshiftCategory(categories)
+
+	assert.Equal(t, "test1,test2", filtered, "Expected category list to exclude openshift")
+}

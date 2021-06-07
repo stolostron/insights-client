@@ -41,6 +41,17 @@ func NewProcessor() *Processor {
 	return p
 }
 
+// FilterOpenshiftCategory Filter openshift category from list
+func FilterOpenshiftCategory(categories []string) string {
+	var filteredCategories []string
+	for i := range categories {
+		if categories[i] != "openshift" {
+			filteredCategories = append(filteredCategories, categories[i])
+		}
+	}
+	return strings.Join(filteredCategories, ",")
+}
+
 func getPolicyReportResults(
 	reports []types.ReportData,
 	clusterInfo types.ManagedClusterInfo,
@@ -61,7 +72,7 @@ func getPolicyReportResults(
 					Policy:      report.Key,
 					Description: contentData.Description,
 					Scored:      false,
-					Category:    strings.Join(contentData.Tags, ","),
+					Category:    FilterOpenshiftCategory(contentData.Tags),
 					Timestamp:   metav1.Timestamp{Seconds: time.Now().Unix(), Nanos: int32(time.Now().UnixNano())},
 					Result:      "fail",
 					Properties: map[string]string{
