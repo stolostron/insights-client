@@ -63,7 +63,7 @@ func getPolicyReportResults(
 		// Convert details data to string
 		jsonStr, _ := json.Marshal(report.Details)
 		extraData := string(jsonStr)
-		if reportContentData != nil && !strings.Contains(report.Component, "ccx_rules_ocm.tutorial_rule") {
+		if reportContentData != nil && !strings.Contains(report.Component, "tutorial_rule") {
 			var contentData types.FormattedContentData
 			reportContentDataBytes, _ := json.Marshal(reportContentData)
 			unmarshalError := json.Unmarshal(reportContentDataBytes, &contentData)
