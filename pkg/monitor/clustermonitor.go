@@ -183,11 +183,11 @@ func (m *Monitor) addCluster(managedCluster *clusterv1.ManagedCluster) {
 	if clusterVendor == "OpenShift" && version >= 4 {
 		glog.Infof("Adding %s to Insights cluster list", managedCluster.GetName())
 		lock.Lock()
+		defer lock.Unlock()
 		m.ManagedClusterInfo = append(m.ManagedClusterInfo, types.ManagedClusterInfo{
 			ClusterID: clusterID,
 			Namespace: managedCluster.GetName(),
 		})
-		lock.Unlock()
 	}
 }
 
@@ -221,11 +221,11 @@ func (m *Monitor) updateCluster(managedCluster *clusterv1.ManagedCluster) {
 	if !found && clusterVendor == "OpenShift" && version >= 4 {
 		glog.Infof("Adding %s to Insights cluster list - Cluster was upgraded", managedCluster.GetName())
 		lock.Lock()
+		defer lock.Unlock()
 		m.ManagedClusterInfo = append(m.ManagedClusterInfo, types.ManagedClusterInfo{
 			ClusterID: clusterID,
 			Namespace: managedCluster.GetName(),
 		})
-		lock.Unlock()
 	}
 }
 
@@ -233,6 +233,7 @@ func (m *Monitor) updateCluster(managedCluster *clusterv1.ManagedCluster) {
 func (m *Monitor) deleteCluster(managedCluster *clusterv1.ManagedCluster) {
 	glog.V(2).Info("Processing Cluster Delete.")
 	lock.Lock()
+	defer lock.Unlock()
 	clusterToDelete := managedCluster.GetName()
 	for clusterIdx, cluster := range m.ManagedClusterInfo {
 		if clusterToDelete == cluster.Namespace {
@@ -240,7 +241,6 @@ func (m *Monitor) deleteCluster(managedCluster *clusterv1.ManagedCluster) {
 			m.ManagedClusterInfo = append(m.ManagedClusterInfo[:clusterIdx], m.ManagedClusterInfo[clusterIdx+1:]...)
 		}
 	}
-	lock.Unlock()
 }
 
 // AddLocalCluster - adds local cluster to Clusters list
@@ -269,11 +269,11 @@ func (m *Monitor) AddLocalCluster(versionObj *unstructured.Unstructured) bool {
 	// If the cluster ID is not empty add to list and return true
 	if clusterID != "" {
 		lock.Lock()
+		defer lock.Unlock()
 		m.ManagedClusterInfo = append(m.ManagedClusterInfo, types.ManagedClusterInfo{
 			ClusterID: clusterID,
 			Namespace: localClusterName,
 		})
-		lock.Unlock()
 		return true
 	}
 
