@@ -318,14 +318,12 @@ func (r *Retriever) FetchClusters(
 		} else if len(ContentsMap) > 0 && r.GetContentConfigMap(dynamicClient) == nil {
 			r.CreateInsightContentConfigmap(dynamicClient)
 		}
-		if len(monitor.ManagedClusterInfo) > 0 {
-			lock.RLock()
-			for _, cluster := range monitor.ManagedClusterInfo {
+		if len(monitor.GetManagedClusterInfo()) > 0 {
+			for _, cluster := range monitor.GetManagedClusterInfo() {
 				glog.Infof("Starting to get  cluster report for  %s", cluster)
 				input <- cluster
 				time.Sleep(time.Duration(config.Cfg.RequestInterval) * time.Second)
 			}
-			lock.RUnlock()
 		}
 	}
 }

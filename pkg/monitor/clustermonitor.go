@@ -220,17 +220,19 @@ func (m *Monitor) updateCluster(managedCluster *clusterv1.ManagedCluster) {
 	// Case to add a ManagedCluster to cluster list after it has been upgraded to version >= 4.X
 	if !found && clusterVendor == "OpenShift" && version >= 4 {
 		glog.Infof("Adding %s to Insights cluster list - Cluster was upgraded", managedCluster.GetName())
+		lock.Lock()
 		m.ManagedClusterInfo = append(m.ManagedClusterInfo, types.ManagedClusterInfo{
 			ClusterID: clusterID,
 			Namespace: managedCluster.GetName(),
 		})
+		lock.Unlock()
 	}
 }
 
 // Removes a ManagedCluster resource from ManagedClusterInfo list
 func (m *Monitor) deleteCluster(managedCluster *clusterv1.ManagedCluster) {
 	glog.V(2).Info("Processing Cluster Delete.")
-
+	lock.Lock()
 	clusterToDelete := managedCluster.GetName()
 	for clusterIdx, cluster := range m.ManagedClusterInfo {
 		if clusterToDelete == cluster.Namespace {
@@ -238,6 +240,7 @@ func (m *Monitor) deleteCluster(managedCluster *clusterv1.ManagedCluster) {
 			m.ManagedClusterInfo = append(m.ManagedClusterInfo[:clusterIdx], m.ManagedClusterInfo[clusterIdx+1:]...)
 		}
 	}
+	lock.Unlock()
 }
 
 // AddLocalCluster - adds local cluster to Clusters list
@@ -286,4 +289,11 @@ func (m *Monitor) GetLocalCluster() string {
 		}
 	}
 	return ""
+}
+
+//Getter for ManagedClusterInfo
+func (m *Monitor) GetManagedClusterInfo() []types.ManagedClusterInfo {
+	lock.Lock()
+	defer lock.Unlock()
+	return m.ManagedClusterInfo
 }
