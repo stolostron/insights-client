@@ -7,7 +7,7 @@ WORKDIR /go/src/github.com/open-cluster-management/insights-client
 COPY . .
 RUN CGO_ENABLED=0 go build -trimpath -o main main.go
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.3
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.4
 
 ARG VCS_REF
 ARG VCS_URL
@@ -40,8 +40,8 @@ LABEL org.label-schema.vendor="Red Hat" \
       io.k8s.description="$IMAGE_DESCRIPTION" \
       io.openshift.tags="$IMAGE_OPENSHIFT_TAGS"
 
-RUN microdnf install ca-certificates vi --nodocs &&\
-    mkdir /licenses &&\
+RUN microdnf update &&\
+    microdnf install ca-certificates vi --nodocs &&\
     microdnf clean all
 
 COPY --from=builder /go/src/github.com/open-cluster-management/insights-client/main /bin/main
