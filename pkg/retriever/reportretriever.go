@@ -204,7 +204,7 @@ func (r *Retriever) CreateInsightsRequest(
 	// userAgent for value will be updated to insights-client once the
 	// the task https://github.com/RedHatInsights/insights-results-smart-proxy/issues/450
 	// is completed
-	userAgent := "insights-operator/v1.0.0+b653953-b653953ed174001d5aca50b3515f1fa6f6b28728 cluster/" + hubID
+	userAgent := "acm-operator/v2.3.0 cluster/" + hubID
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", userAgent)
 	req.Header.Set("Authorization", r.Token)
