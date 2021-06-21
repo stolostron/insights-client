@@ -37,7 +37,9 @@ var configmapGvr = schema.GroupVersionResource{
 func (r *Retriever) InitializeContents(hubID string, dynamicClient dynamic.Interface) int {
 	contentLength := r.retrieveCCXContent(hubID)
 	// create a configmap containing insight content data
-	r.CreateInsightContentConfigmap(dynamicClient)
+	if contentLength > 0 {
+		r.CreateInsightContentConfigmap(dynamicClient)
+	}
 	return contentLength
 }
 
