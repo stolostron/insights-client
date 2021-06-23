@@ -12,7 +12,6 @@ import (
 	"github.com/golang/glog"
 	"github.com/gorilla/mux"
 	"github.com/open-cluster-management/insights-client/pkg/config"
-	"github.com/open-cluster-management/insights-client/pkg/handlers"
 	"github.com/open-cluster-management/insights-client/pkg/monitor"
 	"github.com/open-cluster-management/insights-client/pkg/processor"
 	"github.com/open-cluster-management/insights-client/pkg/retriever"
@@ -80,9 +79,6 @@ func main() {
 	go ret.FetchClusters(monitor, fetchClusterIDs, refreshToken, hubID, dynamicClient)
 
 	router := mux.NewRouter()
-
-	router.HandleFunc("/liveness", handlers.LivenessProbe).Methods("GET")
-	router.HandleFunc("/readiness", handlers.ReadinessProbe).Methods("GET")
 
 	// Configure TLS
 	cfg := &tls.Config{
