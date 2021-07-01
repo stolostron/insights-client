@@ -169,6 +169,13 @@ func createPolicyReport(
 			Name: clusterInfo.Namespace,
 			Namespace: clusterInfo.Namespace,
 		},
+		Summary: v1alpha2.PolicyReportSummary{
+			Pass: 0,
+			Fail: len(clusterViolations),
+			Warn: 0,
+			Error: 0,
+			Skip: 0,
+		},
 	}
 	prUnstructured, unstructuredErr := runtime.DefaultUnstructuredConverter.ToUnstructured(policyreport)
 	if unstructuredErr != nil {
@@ -210,6 +217,7 @@ func updatePolicyReportViolations(
 	// merge existing PolicyReport results with new results
 	currentPolicyReport.Results = clusterViolations
 	currentPolicyReport.SetManagedFields(nil)
+	currentPolicyReport.Summary.Fail = len(clusterViolations)
 	data, marshalErr := json.Marshal(currentPolicyReport)
 	if marshalErr != nil {
 		glog.Warningf("Error Marshalling PolicyReport patch object for cluster %s: %v", clusterInfo.Namespace, marshalErr)
