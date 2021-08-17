@@ -198,17 +198,17 @@ func getGovernanceResults(dynamicClient dynamic.Interface, clusterInfo types.Man
 				if detail.(map[string]interface{})["compliant"] == "NonCompliant" {
 					templateMeta := detail.(map[string]interface{})["templateMeta"].(map[string]interface{})
 					historyItem := detail.(map[string]interface{})["history"].([]interface{})[0].(map[string]interface{})
+					annotations := md["annotations"].(map[string]interface{})
 					clusterViolations = append(clusterViolations, &v1alpha2.PolicyReportResult{
 						Policy:      md["name"].(string),
 						Description: historyItem["message"].(string),
 						Scored:      false,
-						Category:    md["annotations"].(map[string]interface{})["policy.open-cluster-management.io/categories"].(string),
+						Category:    annotations["policy.open-cluster-management.io/categories"].(string),
 						Timestamp:   metav1.Timestamp{Seconds: time.Now().Unix(), Nanos: int32(time.Now().UnixNano())},
 						Result:      "fail",
 						Properties: map[string]string{
 							"created_at": md["creationTimestamp"].(string),
 							"total_risk": convertSevFromGovernance(getSevFromTemplate(plc, templateMeta["name"].(string))),
-							// "extra_data": extraData,
 						},
 					})
 				}
