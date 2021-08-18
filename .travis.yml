@@ -32,8 +32,6 @@ stages:
   - build
   - unit-test
   - test-e2e
-  - release-ff
-  - publish
 
 before_script:
   # Bootstrap the build harness.
@@ -63,9 +61,3 @@ jobs:
         # Bootstrap the build harness, pull test image, and run unit tests.  
         - make component/test/unit
         - make security/scans
-    
-    - stage: publish
-      name: "Publish the image to quay with an official version/sha tag and publish entry to integration pipeline stage"
-      if: type = push AND branch =~ /^release-[0-9]+\..*$/
-      script:
-        - make pipeline-manifest/update PIPELINE_MANIFEST_COMPONENT_SHA256=${TRAVIS_COMMIT} PIPELINE_MANIFEST_COMPONENT_REPO=${TRAVIS_REPO_SLUG} PIPELINE_MANIFEST_BRANCH=${TRAVIS_BRANCH}
