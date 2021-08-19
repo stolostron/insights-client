@@ -210,11 +210,15 @@ func getGovernanceResults(dynamicClient dynamic.Interface, clusterInfo types.Man
 						templateMeta := detail.(map[string]interface{})["templateMeta"].(map[string]interface{})
 						historyItem := detail.(map[string]interface{})["history"].([]interface{})[0].(map[string]interface{})
 						annotations := md["annotations"].(map[string]interface{})
+						category := ""
+						if _, ok := annotations["policy.open-cluster-management.io/categories"]; ok {
+							category = annotations["policy.open-cluster-management.io/categories"].(string)
+						}
 						clusterViolations = append(clusterViolations, &v1alpha2.PolicyReportResult{
 							Policy:      md["name"].(string),
 							Description: historyItem["message"].(string),
 							Scored:      false,
-							Category:    annotations["policy.open-cluster-management.io/categories"].(string),
+							Category:    category,
 							Timestamp:   metav1.Timestamp{Seconds: time.Now().Unix(), Nanos: int32(time.Now().UnixNano())},
 							Result:      "fail",
 							Properties: map[string]string{
