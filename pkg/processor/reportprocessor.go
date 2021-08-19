@@ -190,30 +190,42 @@ func getGovernanceResults(dynamicClient dynamic.Interface, clusterInfo types.Man
 
 	var clusterViolations []*v1alpha2.PolicyReportResult
 	for _, plc := range policyList.Items {
-		md := plc.Object["metadata"].(map[string]interface{})
-		status := plc.Object["status"].(map[string]interface{})
-		details := status["details"].([]interface{})
-		if status["compliant"].(string) == "NonCompliant" {
-			for _, detail := range details {
-				if detail.(map[string]interface{})["compliant"] == "NonCompliant" {
-					templateMeta := detail.(map[string]interface{})["templateMeta"].(map[string]interface{})
-					historyItem := detail.(map[string]interface{})["history"].([]interface{})[0].(map[string]interface{})
-					annotations := md["annotations"].(map[string]interface{})
-					clusterViolations = append(clusterViolations, &v1alpha2.PolicyReportResult{
-						Policy:      md["name"].(string),
-						Description: historyItem["message"].(string),
-						Scored:      false,
-						Category:    annotations["policy.open-cluster-management.io/categories"].(string),
-						Timestamp:   metav1.Timestamp{Seconds: time.Now().Unix(), Nanos: int32(time.Now().UnixNano())},
-						Result:      "fail",
-						Properties: map[string]string{
-							"created_at": md["creationTimestamp"].(string),
-							"total_risk": convertSevFromGovernance(getSevFromTemplate(plc, templateMeta["name"].(string))),
-						},
-					})
+		plcName := plc.Object["metadata"].(map[string]interface{})["name"].(string)
+		func() {
+			defer func() {
+				if err := recover(); err != nil {
+					glog.V(2).Infof(
+						"Error processing policy %s - expected missing data to be present",
+						plcName,
+					)
+				}
+			}()
+
+			md := plc.Object["metadata"].(map[string]interface{})
+			status := plc.Object["status"].(map[string]interface{})
+			details := status["details"].([]interface{})
+			if status["compliant"].(string) == "NonCompliant" {
+				for _, detail := range details {
+					if detail.(map[string]interface{})["compliant"] == "NonCompliant" {
+						templateMeta := detail.(map[string]interface{})["templateMeta"].(map[string]interface{})
+						historyItem := detail.(map[string]interface{})["history"].([]interface{})[0].(map[string]interface{})
+						annotations := md["annotations"].(map[string]interface{})
+						clusterViolations = append(clusterViolations, &v1alpha2.PolicyReportResult{
+							Policy:      md["name"].(string),
+							Description: historyItem["message"].(string),
+							Scored:      false,
+							Category:    annotations["policy.open-cluster-management.io/categories"].(string),
+							Timestamp:   metav1.Timestamp{Seconds: time.Now().Unix(), Nanos: int32(time.Now().UnixNano())},
+							Result:      "fail",
+							Properties: map[string]string{
+								"created_at": md["creationTimestamp"].(string),
+								"total_risk": convertSevFromGovernance(getSevFromTemplate(plc, templateMeta["name"].(string))),
+							},
+						})
+					}
 				}
 			}
-		}
+		}()
 	}
 	return clusterViolations
 }
