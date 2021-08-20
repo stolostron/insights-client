@@ -85,8 +85,6 @@ func setUp(t *testing.T) {
 	}
 	fakeDynamicClient = dynamicfakeclient.NewSimpleDynamicClientWithCustomListKinds(scheme, gvrToListKind, namespace)
 
-	// fakeDynamicClient = dynamicfakeclient.NewSimpleDynamicClient(scheme, namespace)
-
 	processor = NewProcessor()
 	fmt.Println("Setup complete")
 
