@@ -35,6 +35,12 @@ var policyReportGvr = schema.GroupVersionResource{
 	Resource: "policyreports",
 }
 
+var policyGvr = schema.GroupVersionResource{
+	Group:    "policy.open-cluster-management.io",
+	Version:  "v1",
+	Resource: "policies",
+}
+
 // NewProcessor ...
 func NewProcessor() *Processor {
 	p := &Processor{}
@@ -127,6 +133,11 @@ func (p *Processor) createUpdatePolicyReports(input chan types.ProcessorData, dy
 		data.ClusterInfo,
 	)
 
+	govViolations := getGovernanceResults(dynamicClient, data.ClusterInfo)
+	if len(govViolations) > 0 {
+		clusterViolations = append(clusterViolations, govViolations...)
+	}
+
 	if currentPolicyReport.GetName() == "" && len(clusterViolations) > 0 {
 		// If PolicyReport does not exist for cluster -> create it ONLY if there are violations
 		createPolicyReport(clusterViolations, data.ClusterInfo, dynamicClient)
@@ -143,6 +154,96 @@ func (p *Processor) createUpdatePolicyReports(input chan types.ProcessorData, dy
 			data.ClusterInfo.ClusterID,
 		)
 	}
+}
+
+func convertSevFromGovernance(policySev string) string {
+	sevMapping := map[string]interface{}{
+		"critical": "4",
+		"high": "3",
+		"medium": "2",
+		"low": "1",
+	}
+	if severity, ok := sevMapping[policySev]; ok {
+		return severity.(string)
+	}
+	return "0"
+}
+
+//getGovernanceResults creates a result object for each policy violation in the cluster
+func getGovernanceResults(dynamicClient dynamic.Interface, clusterInfo types.ManagedClusterInfo) []*v1alpha2.PolicyReportResult {
+	glog.V(2).Infof(
+		"Getting policy violations for cluster %s (%s)",
+		clusterInfo.Namespace,
+		clusterInfo.ClusterID,
+	)
+
+	res := dynamicClient.Resource(policyGvr).Namespace(clusterInfo.Namespace)
+	policyList, err := res.List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		glog.V(2).Infof(
+			"Error getting policy data for cluster %s (%s)",
+			clusterInfo.Namespace,
+			clusterInfo.ClusterID,
+		)
+		return []*v1alpha2.PolicyReportResult{}
+	}
+
+	var clusterViolations []*v1alpha2.PolicyReportResult
+	for _, plc := range policyList.Items {
+		plcName := plc.Object["metadata"].(map[string]interface{})["name"].(string)
+		func() {
+			defer func() {
+				if err := recover(); err != nil {
+					glog.V(2).Infof(
+						"Error processing policy %s - expected missing data to be present",
+						plcName,
+					)
+				}
+			}()
+
+			md := plc.Object["metadata"].(map[string]interface{})
+			status := plc.Object["status"].(map[string]interface{})
+			details := status["details"].([]interface{})
+			if status["compliant"].(string) == "NonCompliant" {
+				for _, detail := range details {
+					if detail.(map[string]interface{})["compliant"] == "NonCompliant" {
+						templateMeta := detail.(map[string]interface{})["templateMeta"].(map[string]interface{})
+						historyItem := detail.(map[string]interface{})["history"].([]interface{})[0].(map[string]interface{})
+						annotations := md["annotations"].(map[string]interface{})
+						category := ""
+						if _, ok := annotations["policy.open-cluster-management.io/categories"]; ok {
+							category = annotations["policy.open-cluster-management.io/categories"].(string)
+						}
+						clusterViolations = append(clusterViolations, &v1alpha2.PolicyReportResult{
+							Policy:      md["name"].(string),
+							Description: historyItem["message"].(string),
+							Scored:      false,
+							Category:    category,
+							Timestamp:   metav1.Timestamp{Seconds: time.Now().Unix(), Nanos: int32(time.Now().UnixNano())},
+							Result:      "fail",
+							Properties: map[string]string{
+								"created_at": md["creationTimestamp"].(string),
+								"total_risk": convertSevFromGovernance(getSevFromTemplate(plc, templateMeta["name"].(string))),
+							},
+						})
+					}
+				}
+			}
+		}()
+	}
+	return clusterViolations
+}
+
+//getSevFromTemplate pulls the severity for the specified policy template from the spec
+func getSevFromTemplate(plc unstructured.Unstructured, name string) string {
+	plcTemplates := plc.Object["spec"].(map[string]interface{})["policy-templates"].([]interface{})
+	for _, template := range plcTemplates {
+		objDef := template.(map[string]interface{})["objectDefinition"].(map[string]interface{})
+		if objDef["metadata"].(map[string]interface{})["name"] == name {
+			return objDef["spec"].(map[string]interface{})["severity"].(string)
+		}
+	}
+	return ""
 }
 
 func createPolicyReport(
