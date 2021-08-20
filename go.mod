@@ -19,5 +19,5 @@ require (
 	k8s.io/api v0.20.4
 	k8s.io/apimachinery v0.20.4
 	k8s.io/client-go v0.20.4
-	sigs.k8s.io/wg-policy-prototypes v0.0.0-20210401062121-eb9da74ea50d
+	sigs.k8s.io/wg-policy-prototypes v0.0.0-20210823071000-7c72c4bb0a30
 )

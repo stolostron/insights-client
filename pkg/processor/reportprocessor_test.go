@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	dynamicfakeclient "k8s.io/client-go/dynamic/fake"
 	"sigs.k8s.io/wg-policy-prototypes/policy-report/api/v1alpha2"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 func UnmarshalFile(filepath string, resourceType interface{}, t *testing.T) {
@@ -79,7 +80,10 @@ func setUp(t *testing.T) {
 	scheme.AddKnownTypes(corev1.SchemeGroupVersion, &corev1.Namespace{})
 	scheme.AddKnownTypes(v1alpha2.SchemeGroupVersion, &v1alpha2.PolicyReport{})
 
-	fakeDynamicClient = dynamicfakeclient.NewSimpleDynamicClient(scheme, namespace)
+	gvrToListKind := map[schema.GroupVersionResource]string{
+		{Group: "policy.open-cluster-management.io", Version: "v1", Resource: "policies"}: "PolicyList",
+	}
+	fakeDynamicClient = dynamicfakeclient.NewSimpleDynamicClientWithCustomListKinds(scheme, gvrToListKind, namespace)
 
 	processor = NewProcessor()
 	fmt.Println("Setup complete")
