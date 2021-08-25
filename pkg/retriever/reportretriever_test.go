@@ -11,15 +11,15 @@ import (
 	"testing"
 
 	"github.com/open-cluster-management/insights-client/pkg/monitor"
-	mocks "github.com/open-cluster-management/insights-client/pkg/utils"
 	"github.com/open-cluster-management/insights-client/pkg/types"
+	mocks "github.com/open-cluster-management/insights-client/pkg/utils"
 	"github.com/stretchr/testify/assert"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	dynamicfakeclient "k8s.io/client-go/dynamic/fake"
-	"sigs.k8s.io/wg-policy-prototypes/policy-report/api/v1alpha2"
+	"sigs.k8s.io/wg-policy-prototypes/policy-report/pkg/api/wgpolicyk8s.io/v1alpha2"
 )
 
 func TestCallInsights(t *testing.T) {

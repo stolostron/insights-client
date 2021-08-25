@@ -20,7 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8sTypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
-	"sigs.k8s.io/wg-policy-prototypes/policy-report/api/v1alpha2"
+	"sigs.k8s.io/wg-policy-prototypes/policy-report/pkg/api/wgpolicyk8s.io/v1alpha2"
 )
 
 var prSuffix = "-policyreport"
@@ -79,6 +79,7 @@ func getPolicyReportResults(
 					Description: contentData.Description,
 					Scored:      false,
 					Category:    FilterOpenshiftCategory(contentData.Tags),
+					Source:      "insights",
 					Timestamp:   metav1.Timestamp{Seconds: time.Now().Unix(), Nanos: int32(time.Now().UnixNano())},
 					Result:      "fail",
 					Properties: map[string]string{
@@ -113,7 +114,7 @@ func (p *Processor) createUpdatePolicyReports(input chan types.ProcessorData, dy
 	currentPolicyReport := v1alpha2.PolicyReport{}
 	policyReportRes, _ := dynamicClient.Resource(policyReportGvr).Namespace(data.ClusterInfo.Namespace).Get(
 		context.TODO(),
-		data.ClusterInfo.Namespace + prSuffix,
+		data.ClusterInfo.Namespace+prSuffix,
 		metav1.GetOptions{},
 	)
 
@@ -145,8 +146,11 @@ func (p *Processor) createUpdatePolicyReports(input chan types.ProcessorData, dy
 		// If PolicyReport exists -> add new violations and remove violations no longer present
 		updatePolicyReportViolations(currentPolicyReport, clusterViolations, data.ClusterInfo, dynamicClient)
 	} else if currentPolicyReport.GetName() != "" && len(clusterViolations) == 0 {
-		// If PolicyReport no longer has violations -> delete PolicyReport for cluster
-		deletePolicyReport(data.ClusterInfo, dynamicClient)
+		// If PolicyReport no longer has violations && No policyresults from grc-> delete PolicyReport for cluster
+		if !grcViolationsPresent(currentPolicyReport) {
+			deletePolicyReport(data.ClusterInfo, dynamicClient)
+		}
+
 	} else if currentPolicyReport.GetName() == "" && len(clusterViolations) == 0 {
 		glog.Infof(
 			"Cluster %s (%s) is healthy. Skipping PolicyReport creation for this cluster as there are no violations to process.",
@@ -159,9 +163,9 @@ func (p *Processor) createUpdatePolicyReports(input chan types.ProcessorData, dy
 func convertSevFromGovernance(policySev string) string {
 	sevMapping := map[string]interface{}{
 		"critical": "4",
-		"high": "3",
-		"medium": "2",
-		"low": "1",
+		"high":     "3",
+		"medium":   "2",
+		"low":      "1",
 	}
 	if severity, ok := sevMapping[policySev]; ok {
 		return severity.(string)
@@ -219,6 +223,7 @@ func getGovernanceResults(dynamicClient dynamic.Interface, clusterInfo types.Man
 							Description: historyItem["message"].(string),
 							Scored:      false,
 							Category:    category,
+							Source:      "grc",
 							Timestamp:   metav1.Timestamp{Seconds: time.Now().Unix(), Nanos: int32(time.Now().UnixNano())},
 							Result:      "fail",
 							Properties: map[string]string{
@@ -266,16 +271,16 @@ func createPolicyReport(
 		},
 		Results: clusterViolations,
 		Scope: &corev1.ObjectReference{
-			Kind: "cluster",
-			Name: clusterInfo.Namespace,
+			Kind:      "cluster",
+			Name:      clusterInfo.Namespace,
 			Namespace: clusterInfo.Namespace,
 		},
 		Summary: v1alpha2.PolicyReportSummary{
-			Pass: 0,
-			Fail: len(clusterViolations),
-			Warn: 0,
+			Pass:  0,
+			Fail:  len(clusterViolations),
+			Warn:  0,
 			Error: 0,
-			Skip: 0,
+			Skip:  0,
 		},
 	}
 	prUnstructured, unstructuredErr := runtime.DefaultUnstructuredConverter.ToUnstructured(policyreport)
@@ -327,7 +332,7 @@ func updatePolicyReportViolations(
 	forcePatch := true
 	successPatchRes, err := dynamicClient.Resource(policyReportGvr).Namespace(clusterInfo.Namespace).Patch(
 		context.TODO(),
-		clusterInfo.Namespace + prSuffix,
+		clusterInfo.Namespace+prSuffix,
 		k8sTypes.ApplyPatchType,
 		data,
 		metav1.PatchOptions{
@@ -362,6 +367,15 @@ func updatePolicyReportViolations(
 	}
 }
 
+func grcViolationsPresent(currentPolicyReport v1alpha2.PolicyReport) bool {
+	for _, result := range currentPolicyReport.Results {
+		if result.Source == "grc" {
+			return true
+		}
+	}
+	return false
+}
+
 func deletePolicyReport(clusterInfo types.ManagedClusterInfo, dynamicClient dynamic.Interface) {
 	glog.V(2).Infof(
 		"Starting deletePolicyReport for cluster %s (%s)",
@@ -370,7 +384,7 @@ func deletePolicyReport(clusterInfo types.ManagedClusterInfo, dynamicClient dyna
 	)
 	deleteErr := dynamicClient.Resource(policyReportGvr).Namespace(clusterInfo.Namespace).Delete(
 		context.TODO(),
-		clusterInfo.Namespace + prSuffix,
+		clusterInfo.Namespace+prSuffix,
 		metav1.DeleteOptions{},
 	)
 
