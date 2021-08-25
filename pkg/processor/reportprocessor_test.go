@@ -20,9 +20,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	dynamicfakeclient "k8s.io/client-go/dynamic/fake"
-	"sigs.k8s.io/wg-policy-prototypes/policy-report/api/v1alpha2"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	dynamicfakeclient "k8s.io/client-go/dynamic/fake"
+	"sigs.k8s.io/wg-policy-prototypes/policy-report/pkg/api/wgpolicyk8s.io/v1alpha2"
 )
 
 func UnmarshalFile(filepath string, resourceType interface{}, t *testing.T) {
@@ -106,7 +106,7 @@ func Test_createPolicyReport(t *testing.T) {
 	createdPolicyReport := &v1alpha2.PolicyReport{}
 
 	//Check if the policyReport is created
-	unstructuredPolR, err := fakeDynamicClient.Resource(policyReportGvr).Namespace(mngd.Namespace).Get(context.TODO(), mngd.Namespace + "-policyreport", v1.GetOptions{})
+	unstructuredPolR, err := fakeDynamicClient.Resource(policyReportGvr).Namespace(mngd.Namespace).Get(context.TODO(), mngd.Namespace+"-policyreport", v1.GetOptions{})
 	if err != nil {
 		t.Log(err)
 	}
