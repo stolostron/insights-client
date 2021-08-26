@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"fmt"
 
 	"github.com/golang/glog"
 	"github.com/open-cluster-management/insights-client/pkg/retriever"
@@ -175,7 +176,7 @@ func convertSevFromGovernance(policySev string) string {
 
 //getGovernanceResults creates a result object for each policy violation in the cluster
 func getGovernanceResults(dynamicClient dynamic.Interface, clusterInfo types.ManagedClusterInfo) []*v1alpha2.PolicyReportResult {
-	glog.V(2).Infof(
+	glog.Infof(
 		"Getting policy violations for cluster %s (%s)",
 		clusterInfo.Namespace,
 		clusterInfo.ClusterID,
@@ -208,7 +209,13 @@ func getGovernanceResults(dynamicClient dynamic.Interface, clusterInfo types.Man
 			md := plc.Object["metadata"].(map[string]interface{})
 			status := plc.Object["status"].(map[string]interface{})
 			details := status["details"].([]interface{})
+
+			glog.Infof(
+				"found policy %s",
+				plcName,
+			)
 			if status["compliant"].(string) == "NonCompliant" {
+				glog.Info("noncompliant!")
 				for _, detail := range details {
 					if detail.(map[string]interface{})["compliant"] == "NonCompliant" {
 						templateMeta := detail.(map[string]interface{})["templateMeta"].(map[string]interface{})
@@ -218,6 +225,7 @@ func getGovernanceResults(dynamicClient dynamic.Interface, clusterInfo types.Man
 						if _, ok := annotations["policy.open-cluster-management.io/categories"]; ok {
 							category = annotations["policy.open-cluster-management.io/categories"].(string)
 						}
+						glog.Info("adding violations....")
 						clusterViolations = append(clusterViolations, &v1alpha2.PolicyReportResult{
 							Policy:      md["name"].(string),
 							Description: historyItem["message"].(string),
@@ -236,6 +244,12 @@ func getGovernanceResults(dynamicClient dynamic.Interface, clusterInfo types.Man
 			}
 		}()
 	}
+	glog.Infof(
+		"Got policy violations for cluster %s (%s)",
+		clusterInfo.Namespace,
+		clusterInfo.ClusterID,
+	)
+	glog.Info(fmt.Sprint(clusterViolations))
 	return clusterViolations
 }
 
