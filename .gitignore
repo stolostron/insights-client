@@ -12,3 +12,4 @@ insights-client
 sslcert/tls.crt
 sslcert/tls.key
 sslcert/tls.csr
+.DS_Store

@@ -3,21 +3,26 @@ module github.com/open-cluster-management/insights-client
 go 1.16
 
 require (
-	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
-	github.com/google/go-cmp v0.5.4 // indirect
+	github.com/go-logr/logr v1.1.0 // indirect
+	github.com/golang/glog v1.0.0
+	github.com/google/go-cmp v0.5.6 // indirect
+	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/gorilla/mux v1.8.0
+	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kennygrant/sanitize v1.2.4
-	github.com/kr/text v0.2.0 // indirect
-	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
-	github.com/onsi/ginkgo v1.14.2 // indirect
-	github.com/onsi/gomega v1.10.4 // indirect
-	github.com/open-cluster-management/api v0.0.0-20201210143210-581cab55c797
 	github.com/stretchr/testify v1.7.0
-	golang.org/x/sys v0.0.0-20210119212857-b64e53b001e4 // indirect
-	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
-	k8s.io/api v0.20.4
-	k8s.io/apimachinery v0.20.4
-	k8s.io/client-go v0.20.4
-	sigs.k8s.io/wg-policy-prototypes v0.0.0-20210823071000-7c72c4bb0a30
+	golang.org/x/net v0.0.0-20210916014120-12bc252f5db8 // indirect
+	golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f // indirect
+	golang.org/x/sys v0.0.0-20210915083310-ed5796bab164 // indirect
+	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect
+	golang.org/x/text v0.3.7 // indirect
+	google.golang.org/protobuf v1.27.1 // indirect
+	k8s.io/api v0.22.1
+	k8s.io/apimachinery v0.22.1
+	k8s.io/client-go v0.22.1
+	k8s.io/klog/v2 v2.20.0 // indirect
+	k8s.io/utils v0.0.0-20210820185131-d34e5cb4466e // indirect
+	open-cluster-management.io/api v0.0.0-20210916013819-2e58cdb938f9
+	sigs.k8s.io/controller-runtime v0.10.0 // indirect
+	sigs.k8s.io/wg-policy-prototypes v0.0.0-20210911211205-fb8f67bb6d38
 )
