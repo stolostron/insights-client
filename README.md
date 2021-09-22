@@ -30,3 +30,6 @@ CCX_TOKEN        | no       | Not set                                 | If not s
 POLL_INTERVAL    | no       | 30                                      | 30 minute default polling interval cloud.redhat.com
 REQUEST_INTERVAL | no       | 1                                       | 1 second Interval between 2 consecutive Insights requests
 CACERT           | no       | Not set                                 | Used for dev & test ONLY
+
+
+Rebuild: 2021-09-22
