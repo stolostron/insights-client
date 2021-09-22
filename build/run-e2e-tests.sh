@@ -11,6 +11,7 @@ echo "IMAGE: " $IMAGE_NAME
 DEFAULT_NS="open-cluster-management"
 HUB_KUBECONFIG=$HOME/.kube/kind-config-hub
 WORKDIR=`pwd`
+INSIGHTS_CLIENT_CCX_TOKEN="testtoken"
 
 sed_command='sed -i-e -e'
 if [[ "$(uname)" == "Darwin" ]]; then
