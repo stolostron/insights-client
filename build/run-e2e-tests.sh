@@ -54,12 +54,12 @@ setup_kubectl_and_oc_command() {
 	echo $(pwd)
 	mv README.md.tmp README.md 
 	chmod +x ./kubectl
-	if [[ ! -f /usr/local/bin/kubectl ]]; then
-		sudo cp ./kubectl /usr/local/bin/kubectl
+	if [[ ! -f /usr/bin/kubectl ]]; then
+		sudo cp ./kubectl /usr/bin/kubectl
 	fi
 	chmod +x ./oc
-	if [[ ! -f /usr/local/bin/oc ]]; then
-		sudo cp ./oc /usr/local/bin/oc
+	if [[ ! -f /usr/bin/oc ]]; then
+		sudo cp ./oc /usr/bin/oc
 	fi
 	# kubectl and oc are now installed in current dir 
 	echo -n "kubectl version" && kubectl version
