@@ -38,10 +38,12 @@ setup_kubectl_and_oc_command() {
 	echo "Install kubectl and oc from openshift mirror (https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.4.14/openshift-client-mac-4.4.14.tar.gz)" 
 	mv README.md README.md.tmp 
     if [[ "$(uname)" == "Darwin" ]]; then # then we are on a Mac 
+	        WORKDIR=`pwd`
 		curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.4.14/openshift-client-mac-4.4.14.tar.gz 
 		tar xzvf openshift-client-mac-4.4.14.tar.gz  # xzf to quiet logs
 		rm openshift-client-mac-4.4.14.tar.gz
-    elif [[ "$(uname)" == "Linux" ]]; then # we are in travis, building in rhel 
+    elif [[ "$(uname)" == "Linux" ]]; then # we are in prow, building in rhel 
+	        WORKDIR=/tmp/insights-client
 		curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.4.14/openshift-client-linux-4.4.14.tar.gz
 		tar xzvf openshift-client-linux-4.4.14.tar.gz  # xzf to quiet logs
 		rm openshift-client-linux-4.4.14.tar.gz
@@ -65,7 +67,6 @@ setup_kubectl_and_oc_command() {
 }
  
 create_kind_hub() { 
-    WORKDIR=`pwd`
     if [[ ! -f /usr/local/bin/kind ]]; then
     	echo "=====Create kind cluster=====" 
     	echo "Install kind from (https://kind.sigs.k8s.io/)."
