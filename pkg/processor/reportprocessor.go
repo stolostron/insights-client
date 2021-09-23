@@ -170,7 +170,7 @@ func convertSevFromGovernance(policySev string) string {
 	if severity, ok := sevMapping[policySev]; ok {
 		return severity.(string)
 	}
-	return "0"
+	return "1"
 }
 
 //getGovernanceResults creates a result object for each policy violation in the cluster
