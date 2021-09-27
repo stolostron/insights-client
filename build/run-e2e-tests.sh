@@ -11,6 +11,7 @@ echo "IMAGE: " $IMAGE_NAME
 DEFAULT_NS="open-cluster-management"
 HUB_KUBECONFIG=$HOME/.kube/kind-config-hub
 WORKDIR=`pwd`
+INSIGHTS_CLIENT_CCX_TOKEN="testtoken"
 
 sed_command='sed -i-e -e'
 if [[ "$(uname)" == "Darwin" ]]; then
@@ -38,10 +39,12 @@ setup_kubectl_and_oc_command() {
 	echo "Install kubectl and oc from openshift mirror (https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.4.14/openshift-client-mac-4.4.14.tar.gz)" 
 	mv README.md README.md.tmp 
     if [[ "$(uname)" == "Darwin" ]]; then # then we are on a Mac 
+	        WORKDIR=`pwd`
 		curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.4.14/openshift-client-mac-4.4.14.tar.gz 
 		tar xzvf openshift-client-mac-4.4.14.tar.gz  # xzf to quiet logs
 		rm openshift-client-mac-4.4.14.tar.gz
-    elif [[ "$(uname)" == "Linux" ]]; then # we are in travis, building in rhel 
+    elif [[ "$(uname)" == "Linux" ]]; then # we are in prow, building in rhel 
+	        WORKDIR=/tmp/insights-client
 		curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.4.14/openshift-client-linux-4.4.14.tar.gz
 		tar xzvf openshift-client-linux-4.4.14.tar.gz  # xzf to quiet logs
 		rm openshift-client-linux-4.4.14.tar.gz
@@ -52,12 +55,12 @@ setup_kubectl_and_oc_command() {
 	echo $(pwd)
 	mv README.md.tmp README.md 
 	chmod +x ./kubectl
-	if [[ ! -f /usr/local/bin/kubectl ]]; then
-		sudo cp ./kubectl /usr/local/bin/kubectl
+	if [[ ! -f /usr/bin/kubectl ]]; then
+		sudo cp ./kubectl /usr/bin/kubectl
 	fi
 	chmod +x ./oc
-	if [[ ! -f /usr/local/bin/oc ]]; then
-		sudo cp ./oc /usr/local/bin/oc
+	if [[ ! -f /usr/bin/oc ]]; then
+		sudo cp ./oc /usr/bin/oc
 	fi
 	# kubectl and oc are now installed in current dir 
 	echo -n "kubectl version" && kubectl version
@@ -65,7 +68,6 @@ setup_kubectl_and_oc_command() {
 }
  
 create_kind_hub() { 
-    WORKDIR=`pwd`
     if [[ ! -f /usr/local/bin/kind ]]; then
     	echo "=====Create kind cluster=====" 
     	echo "Install kind from (https://kind.sigs.k8s.io/)."
@@ -105,6 +107,7 @@ delete_command_binaries(){
 
 initial_setup() {
     echo $WORKDIR
+	cd ${WORKDIR}
     echo "=====Deploying insights-client====="
 	$sed_command "s~{{ INSIGHTS_CLIENT_IMAGE }}~$IMAGE_NAME~g" ./test-data/e2e/insights-chart/templates/insights-deployment.yaml
 	$sed_command "s~{{ INSIGHTS_CLIENT_CCX_TOKEN }}~$INSIGHTS_CLIENT_CCX_TOKEN~g" ./test-data/e2e/insights-chart/templates/insights-deployment.yaml
@@ -134,7 +137,7 @@ test_content_and_local_cluster_report(){
 	pod=$(oc get pods | grep insights-client | cut -d' ' -f1)
 	oc logs $pod
 	log=$(oc logs $pod) 
-	log_msg=$(echo $log| grep "Creating Request for cluster local-cluster (69365d80-c4ef-4999-8417-f1")
+	log_msg=$(echo $log| grep "Creating Content Request for cluster 69365d80-c4ef-4999-8417-f14c8e2892c2")
 	if [[ "$log_msg" == *"local-cluster"* ]]; then
 	    echo "Pod log has policy report"
 	else

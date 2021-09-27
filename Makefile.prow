@@ -14,4 +14,4 @@ unit-test:
 
 .PHONY: test-e2e
 test-e2e:
-	sh build/run-e2e-tests.sh
+	build/run-e2e-tests-prow.sh
