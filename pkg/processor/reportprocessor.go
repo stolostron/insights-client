@@ -147,9 +147,7 @@ func (p *Processor) createUpdatePolicyReports(input chan types.ProcessorData, dy
 		updatePolicyReportViolations(currentPolicyReport, clusterViolations, data.ClusterInfo, dynamicClient)
 	} else if currentPolicyReport.GetName() != "" && len(clusterViolations) == 0 {
 		// If PolicyReport no longer has violations && No policyresults from grc-> delete PolicyReport for cluster
-		if !grcViolationsPresent(currentPolicyReport) {
-			deletePolicyReport(data.ClusterInfo, dynamicClient)
-		}
+		deletePolicyReport(data.ClusterInfo, dynamicClient)
 
 	} else if currentPolicyReport.GetName() == "" && len(clusterViolations) == 0 {
 		glog.Infof(
@@ -365,15 +363,6 @@ func updatePolicyReportViolations(
 			clusterInfo.ClusterID,
 		)
 	}
-}
-
-func grcViolationsPresent(currentPolicyReport v1alpha2.PolicyReport) bool {
-	for _, result := range currentPolicyReport.Results {
-		if result.Source == "grc" {
-			return true
-		}
-	}
-	return false
 }
 
 func deletePolicyReport(clusterInfo types.ManagedClusterInfo, dynamicClient dynamic.Interface) {
