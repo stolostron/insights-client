@@ -20,18 +20,28 @@ type Error_vals struct {
 	HasReason string      `json:"HasReason"`
 }
 
+type Metadata struct {
+	Condition    string   `json:"condition"`
+	Description  string   `json:"description"`
+	Impact       string   `json:"impact"`
+	Likelihood   int      `json:"likelihood"`
+	PublishDate string    `json:"publish_date"`
+	Status       string   `json:"status"`
+	Tags         []string `json:"tags"`
+}
+
 type FormattedContentData struct {
-	Summary     string   `json:"summary"`
-	Reason      string   `json:"reason"`
-	Resolution  string   `json:"resolution"`
-	Generic     string   `json:"generic"`
-	HasReason   bool     `json:"HasReason"`
-	Condition   string   `json:"condition"`
-	Description string   `json:"description"`
-	Impact      int      `json:"impact"`
-	Likelihood  int      `json:"likelihood"`
-	TotalRisk   int      `json:"total_risk"`
-	PublishDate string   `json:"publish_date"`
-	Status      string   `json:"status"`
-	Tags        []string `json:"tags"`
+	Summary      string   `json:"summary"`
+	Reason       string   `json:"reason"`
+	Resolution   string   `json:"resolution"`
+	Generic      string   `json:"generic"`
+	HasReason    bool     `json:"HasReason"`
+	Condition    string   `json:"condition"`
+	Description  string   `json:"description"`
+	Impact       string   `json:"impact"`
+	Likelihood   int      `json:"likelihood"`
+	TotalRisk    int      `json:"total_risk"`
+	PublishDate  string   `json:"publish_date"`
+	Status       string   `json:"status"`
+	Tags         []string `json:"tags"`
 }
