@@ -5,6 +5,7 @@ package config
 
 import (
 
+    "reflect"
 	"testing"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/rest"
@@ -16,11 +17,12 @@ func Test_GetConfig(t *testing.T) {
 	clientConfig := GetConfig()
 	fromFlags, _ := clientcmd.BuildConfigFromFlags("", Cfg.KubeConfig)
     fromRest, _ := rest.InClusterConfig()
-	if Cfg.KubeConfig != "" && clientConfig {
-		t.Errorf("Failed testing GetConfig()  1Expected: %s  Got: %s", fromRest, clientConfig)
+
+	if Cfg.KubeConfig != "" && !reflect.DeepEqual(*clientConfig, *fromFlags) { // if config is not empty, then get config from flags
+		t.Errorf("Failed testing GetConfig()  Expected: %s  Got: %s", fromFlags, clientConfig)
 	}
-    if Cfg.KubeConfig == "" && clientConfig {
-		t.Errorf("Failed testing GetConfig()  2Expected: %s  Got: %s", fromRest, clientConfig)
+    if Cfg.KubeConfig == "" && !reflect.DeepEqual(*clientConfig, *fromRest) { // if the config is empty, get using rest client
+		t.Errorf("Failed testing GetConfig()  Expected: %s  Got: %s", fromRest, clientConfig)
 	}
 
 }
