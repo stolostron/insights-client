@@ -15,10 +15,13 @@ import (
 func Test_GetConfig(t *testing.T) {
 
 	clientConfig := GetConfig()
-	fromFlags, _ := clientcmd.BuildConfigFromFlags("", Cfg.KubeConfig)
-    fromRest, _ := rest.InClusterConfig()
 
-	if Cfg.KubeConfig != "" && !reflect.DeepEqual(*clientConfig, *fromFlags) { // if config is not empty, then get config from flags
+	if cfg.kubeconfig != "" {
+        fromFlags, _ := clientcmd.BuildConfigFromFlags("", Cfg.KubeConfig)
+    }
+	fromRest, _ := rest.InClusterConfig()
+
+	if cfg.kubeconfig != "" && !reflect.DeepEqual(*clientConfig, *fromFlags) { // if config is not empty, then get config from flags
 		t.Errorf("Failed testing GetConfig()  Expected: %s  Got: %s", fromFlags, clientConfig)
 	}
     if Cfg.KubeConfig == "" && !reflect.DeepEqual(*clientConfig, *fromRest) { // if the config is empty, get using rest client
