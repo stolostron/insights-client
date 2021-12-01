@@ -15,9 +15,9 @@ import (
 func Test_GetConfig(t *testing.T) {
 
 	clientConfig := GetConfig()
-
+	var fromFlags;
 	if cfg.kubeconfig != "" {
-         var fromFlags, _ := clientcmd.BuildConfigFromFlags("", Cfg.KubeConfig)
+         fromFlags, _ := clientcmd.BuildConfigFromFlags("", Cfg.KubeConfig)
     }
 	fromRest, _ := rest.InClusterConfig()
 
