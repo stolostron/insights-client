@@ -43,7 +43,7 @@ func GetClusterClaimInfo(managedCluster *clusterv1.ManagedCluster) (string, int6
 	var clusterID string
 
 	for _, claimInfo := range managedCluster.Status.ClusterClaims {
-		if claimInfo.Name == "product.stolostron.io" {
+		if claimInfo.Name == "product.open-cluster-management.io" {
 			clusterVendor = claimInfo.Value
 		}
 		if claimInfo.Name == "version.openshift.io" {
@@ -85,7 +85,7 @@ func (m *Monitor) WatchClusters() {
 	dynamicFactory := dynamicinformer.NewDynamicSharedInformerFactory(dynamicClient, 60*time.Second)
 
 	// Create GVR for ManagedCluster
-	managedClusterGvr, _ := schema.ParseResourceArg("managedclusters.v1.cluster.stolostron.io")
+	managedClusterGvr, _ := schema.ParseResourceArg("managedclusters.v1.cluster.open-cluster-management.io")
 
 	//Create Informers for ManagedCluster
 	managedClusterInformer := dynamicFactory.ForResource(*managedClusterGvr).Informer()
@@ -107,7 +107,7 @@ func (m *Monitor) WatchClusters() {
 	managedClusterInformer.AddEventHandler(handlers)
 
 	// Periodically check if the ManagedCluster resource exists
-	go m.stopAndStartInformer("cluster.stolostron.io/v1", managedClusterInformer)
+	go m.stopAndStartInformer("cluster.open-cluster-management.io/v1", managedClusterInformer)
 }
 
 // Stop and Start informer according to Rediscover Rate

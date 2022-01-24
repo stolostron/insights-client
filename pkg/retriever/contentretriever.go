@@ -147,7 +147,7 @@ func (r *Retriever) GetContentConfigMap(dynamicClient dynamic.Interface) *unstru
 	return configmapRes
 }
 
-// CreateInsightContentConfigmap Creates a configmap to store content data in stolostron namespace
+// CreateInsightContentConfigmap Creates a configmap to store content data in open-cluster-management namespace
 func (r *Retriever) CreateInsightContentConfigmap(dynamicClient dynamic.Interface) {
 	var configMapData = make(map[string]string)
 	for policy := range ContentsMap {
