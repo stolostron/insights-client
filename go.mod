@@ -1,4 +1,4 @@
-module github.com/open-cluster-management/insights-client
+module github.com/stolostron/insights-client
 
 go 1.17
 

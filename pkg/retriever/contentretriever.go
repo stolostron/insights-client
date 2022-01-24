@@ -12,15 +12,14 @@ import (
 	"sync"
 
 	"github.com/golang/glog"
-	"github.com/open-cluster-management/insights-client/pkg/types"
-	"github.com/open-cluster-management/insights-client/pkg/config"
+	"github.com/stolostron/insights-client/pkg/config"
+	"github.com/stolostron/insights-client/pkg/types"
 
-
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/dynamic"
 )
 
@@ -131,7 +130,7 @@ func (r *Retriever) CreateContents(responseBody types.ContentsResponse) {
 }
 
 // GetContentConfigMap ...
-func (r *Retriever) GetContentConfigMap(dynamicClient dynamic.Interface) (*unstructured.Unstructured) {
+func (r *Retriever) GetContentConfigMap(dynamicClient dynamic.Interface) *unstructured.Unstructured {
 	configmapRes, err := dynamicClient.Resource(configmapGvr).Namespace(podNS).Get(
 		context.TODO(),
 		"insight-content-data",
@@ -172,7 +171,7 @@ func (r *Retriever) CreateInsightContentConfigmap(dynamicClient dynamic.Interfac
 	}
 	obj := &unstructured.Unstructured{Object: cmUnstructured}
 	configmapRes := r.GetContentConfigMap(dynamicClient)
-	
+
 	var err error
 	if configmapRes != nil {
 		_, err = dynamicClient.Resource(configmapGvr).Namespace(podNS).Update(

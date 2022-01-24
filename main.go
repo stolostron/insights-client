@@ -11,11 +11,11 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/gorilla/mux"
-	"github.com/open-cluster-management/insights-client/pkg/config"
-	"github.com/open-cluster-management/insights-client/pkg/monitor"
-	"github.com/open-cluster-management/insights-client/pkg/processor"
-	"github.com/open-cluster-management/insights-client/pkg/retriever"
-	"github.com/open-cluster-management/insights-client/pkg/types"
+	"github.com/stolostron/insights-client/pkg/config"
+	"github.com/stolostron/insights-client/pkg/monitor"
+	"github.com/stolostron/insights-client/pkg/processor"
+	"github.com/stolostron/insights-client/pkg/retriever"
+	"github.com/stolostron/insights-client/pkg/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
