@@ -22,7 +22,7 @@ var namespace *corev1.Namespace
 func TestCallContents(t *testing.T) {
 	namespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "stolostron",
+			Name: "open-cluster-management",
 		},
 	}
 	scheme := runtime.NewScheme()
