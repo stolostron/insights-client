@@ -19,9 +19,9 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/open-cluster-management/insights-client/pkg/config"
-	"github.com/open-cluster-management/insights-client/pkg/monitor"
-	"github.com/open-cluster-management/insights-client/pkg/types"
+	"github.com/stolostron/insights-client/pkg/config"
+	"github.com/stolostron/insights-client/pkg/monitor"
+	"github.com/stolostron/insights-client/pkg/types"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	knet "k8s.io/apimachinery/pkg/util/net"

@@ -12,9 +12,9 @@ import (
 	"testing"
 
 	"github.com/kennygrant/sanitize"
-	"github.com/open-cluster-management/insights-client/pkg/retriever"
-	"github.com/open-cluster-management/insights-client/pkg/types"
-	mocks "github.com/open-cluster-management/insights-client/pkg/utils"
+	"github.com/stolostron/insights-client/pkg/retriever"
+	"github.com/stolostron/insights-client/pkg/types"
+	mocks "github.com/stolostron/insights-client/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -102,7 +102,7 @@ func Test_createPolicyReport(t *testing.T) {
 	createdPolicyReport := &v1alpha2.PolicyReport{}
 
 	//Check if the policyReport is created
-	unstructuredPolR, err := fakeDynamicClient.Resource(policyReportGvr).Namespace(mngd.Namespace).Get(context.TODO(), mngd.Namespace + "-policyreport", v1.GetOptions{})
+	unstructuredPolR, err := fakeDynamicClient.Resource(policyReportGvr).Namespace(mngd.Namespace).Get(context.TODO(), mngd.Namespace+"-policyreport", v1.GetOptions{})
 	if err != nil {
 		t.Log(err)
 	}

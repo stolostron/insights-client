@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/open-cluster-management/insights-client/pkg/config"
-	"github.com/open-cluster-management/insights-client/pkg/types"
+	"github.com/stolostron/insights-client/pkg/config"
+	"github.com/stolostron/insights-client/pkg/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -20,7 +20,7 @@ import (
 	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/tools/cache"
 
-	clusterv1 "github.com/open-cluster-management/api/cluster/v1"
+	clusterv1 "open-cluster-management.io/api/cluster/v1"
 )
 
 var lock = sync.RWMutex{}
@@ -43,7 +43,7 @@ func GetClusterClaimInfo(managedCluster *clusterv1.ManagedCluster) (string, int6
 	var clusterID string
 
 	for _, claimInfo := range managedCluster.Status.ClusterClaims {
-		if claimInfo.Name == "product.open-cluster-management.io" {
+		if claimInfo.Name == "product.stolostron.io" {
 			clusterVendor = claimInfo.Value
 		}
 		if claimInfo.Name == "version.openshift.io" {
@@ -85,7 +85,7 @@ func (m *Monitor) WatchClusters() {
 	dynamicFactory := dynamicinformer.NewDynamicSharedInformerFactory(dynamicClient, 60*time.Second)
 
 	// Create GVR for ManagedCluster
-	managedClusterGvr, _ := schema.ParseResourceArg("managedclusters.v1.cluster.open-cluster-management.io")
+	managedClusterGvr, _ := schema.ParseResourceArg("managedclusters.v1.cluster.stolostron.io")
 
 	//Create Informers for ManagedCluster
 	managedClusterInformer := dynamicFactory.ForResource(*managedClusterGvr).Informer()
@@ -107,7 +107,7 @@ func (m *Monitor) WatchClusters() {
 	managedClusterInformer.AddEventHandler(handlers)
 
 	// Periodically check if the ManagedCluster resource exists
-	go m.stopAndStartInformer("cluster.open-cluster-management.io/v1", managedClusterInformer)
+	go m.stopAndStartInformer("cluster.stolostron.io/v1", managedClusterInformer)
 }
 
 // Stop and Start informer according to Rediscover Rate
