@@ -1,4 +1,4 @@
-module github.com/open-cluster-management/insights-client
+module github.com/stolostron/insights-client
 
 go 1.17
 
@@ -47,4 +47,8 @@ require (
 	k8s.io/kube-openapi v0.0.0-20210421082810-95288971da7e // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.1.2 // indirect
 	sigs.k8s.io/yaml v1.2.0 // indirect
+	golang.org/x/crypto v0.0.0-20211215165025-cf75a172585e // indirect - keep this in go.mod
+
 )
+
+replace golang.org/x/crypto => golang.org/x/crypto v0.0.0-20211215165025-cf75a172585e
