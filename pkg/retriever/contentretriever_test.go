@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	mocks "github.com/open-cluster-management/insights-client/pkg/utils"
+	mocks "github.com/stolostron/insights-client/pkg/utils"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
