@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/open-cluster-management/insights-client/pkg/config"
-	"github.com/open-cluster-management/insights-client/pkg/types"
+	"github.com/stolostron/insights-client/pkg/config"
+	"github.com/stolostron/insights-client/pkg/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -20,7 +20,7 @@ import (
 	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/tools/cache"
 
-	clusterv1 "github.com/open-cluster-management/api/cluster/v1"
+	clusterv1 "open-cluster-management.io/api/cluster/v1"
 )
 
 var lock = sync.RWMutex{}

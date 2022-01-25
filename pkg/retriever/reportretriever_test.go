@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/open-cluster-management/insights-client/pkg/monitor"
-	mocks "github.com/open-cluster-management/insights-client/pkg/utils"
-	"github.com/open-cluster-management/insights-client/pkg/types"
+	"github.com/stolostron/insights-client/pkg/monitor"
+	"github.com/stolostron/insights-client/pkg/types"
+	mocks "github.com/stolostron/insights-client/pkg/utils"
 	"github.com/stretchr/testify/assert"
 
 	corev1 "k8s.io/api/core/v1"

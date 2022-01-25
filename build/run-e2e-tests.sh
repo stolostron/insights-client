@@ -111,7 +111,7 @@ initial_setup() {
     
 	echo "Current directory"
 	echo $(pwd)
-	echo -n "Create namespace open-cluster-management-monitoring: " && kubectl create namespace open-cluster-management
+	echo -n "Create namespace open-cluster-management: " && kubectl create namespace open-cluster-management
 	echo -n "Switch to namespace: " && kubectl config set-context --current --namespace open-cluster-management
     echo -n "Creating pull secret: " && kubectl create secret docker-registry search-operator-pull-secret --docker-server=quay.io --docker-username=$DOCKER_USER --docker-password=$DOCKER_PASS
 

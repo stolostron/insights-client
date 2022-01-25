@@ -9,10 +9,10 @@ import (
 	"testing"
 
 	sanitize "github.com/kennygrant/sanitize"
-	clusterv1 "github.com/open-cluster-management/api/cluster/v1"
-	"github.com/open-cluster-management/insights-client/pkg/types"
+	"github.com/stolostron/insights-client/pkg/types"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	clusterv1 "open-cluster-management.io/api/cluster/v1"
 )
 
 func unmarshalFile(filepath string, resourceType interface{}, t *testing.T) {

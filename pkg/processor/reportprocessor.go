@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/open-cluster-management/insights-client/pkg/retriever"
-	"github.com/open-cluster-management/insights-client/pkg/types"
+	"github.com/stolostron/insights-client/pkg/retriever"
+	"github.com/stolostron/insights-client/pkg/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -107,7 +107,7 @@ func (p *Processor) createUpdatePolicyReports(input chan types.ProcessorData, dy
 	currentPolicyReport := v1alpha2.PolicyReport{}
 	policyReportRes, _ := dynamicClient.Resource(policyReportGvr).Namespace(data.ClusterInfo.Namespace).Get(
 		context.TODO(),
-		data.ClusterInfo.Namespace + prSuffix,
+		data.ClusterInfo.Namespace+prSuffix,
 		metav1.GetOptions{},
 	)
 
@@ -165,16 +165,16 @@ func createPolicyReport(
 		},
 		Results: clusterViolations,
 		Scope: &corev1.ObjectReference{
-			Kind: "cluster",
-			Name: clusterInfo.Namespace,
+			Kind:      "cluster",
+			Name:      clusterInfo.Namespace,
 			Namespace: clusterInfo.Namespace,
 		},
 		Summary: v1alpha2.PolicyReportSummary{
-			Pass: 0,
-			Fail: len(clusterViolations),
-			Warn: 0,
+			Pass:  0,
+			Fail:  len(clusterViolations),
+			Warn:  0,
 			Error: 0,
-			Skip: 0,
+			Skip:  0,
 		},
 	}
 	prUnstructured, unstructuredErr := runtime.DefaultUnstructuredConverter.ToUnstructured(policyreport)
@@ -226,7 +226,7 @@ func updatePolicyReportViolations(
 	forcePatch := true
 	successPatchRes, err := dynamicClient.Resource(policyReportGvr).Namespace(clusterInfo.Namespace).Patch(
 		context.TODO(),
-		clusterInfo.Namespace + prSuffix,
+		clusterInfo.Namespace+prSuffix,
 		k8sTypes.ApplyPatchType,
 		data,
 		metav1.PatchOptions{
@@ -269,7 +269,7 @@ func deletePolicyReport(clusterInfo types.ManagedClusterInfo, dynamicClient dyna
 	)
 	deleteErr := dynamicClient.Resource(policyReportGvr).Namespace(clusterInfo.Namespace).Delete(
 		context.TODO(),
-		clusterInfo.Namespace + prSuffix,
+		clusterInfo.Namespace+prSuffix,
 		metav1.DeleteOptions{},
 	)
 
