@@ -243,7 +243,7 @@ func getSevFromTemplate(plc unstructured.Unstructured, name string) string {
 	for _, template := range plcTemplates {
 		objDef := template.(map[string]interface{})["objectDefinition"].(map[string]interface{})
 		if objDef["metadata"].(map[string]interface{})["name"] == name {
-			return objDef["spec"].(map[string]interface{})["severity"].(string)
+			return strings.ToLower(objDef["spec"].(map[string]interface{})["severity"].(string))
 		}
 	}
 	return ""
