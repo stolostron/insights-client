@@ -143,16 +143,32 @@ func (r *Retriever) StartTokenRefresh() error {
 	return fmt.Errorf("Unknown error during TokenRefresh")
 }
 
+func clusterNeedsCCX(cluster types.ManagedClusterInfo, clusterCCXMap map[string]bool) bool {
+	lock.Lock()
+	defer lock.Unlock()
+	needsCCX := clusterCCXMap[cluster.ClusterID]
+	return needsCCX
+}
+
 // RetrieveCCXReport ...
 func (r *Retriever) RetrieveCCXReport(
 	hubID string,
 	input chan types.ManagedClusterInfo,
 	output chan types.ProcessorData,
+	clusterCCXMap map[string]bool,
 ) {
 	for {
 		cluster := <-input
 		// If the cluster id is empty do nothing
 		if cluster.Namespace == "" || cluster.ClusterID == "" {
+			return
+		}
+
+		if !clusterNeedsCCX(cluster, clusterCCXMap) {
+			output <- types.ProcessorData{
+				ClusterInfo: cluster,
+				Reports:     types.Reports{},
+			}
 			return
 		}
 

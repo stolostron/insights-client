@@ -66,7 +66,7 @@ func main() {
 	}
 
 	// Fetch the reports for each cluster & create the PolicyReport resources for each violation.
-	go ret.RetrieveCCXReport(hubID, fetchClusterIDs, fetchPolicyReports)
+	go ret.RetrieveCCXReport(hubID, fetchClusterIDs, fetchPolicyReports, monitor.ClusterNeedsCCX)
 
 	processor := processor.NewProcessor()
 	go processor.ProcessPolicyReports(fetchPolicyReports, dynamicClient)
