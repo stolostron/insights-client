@@ -226,11 +226,13 @@ func (m *Monitor) updateCluster(managedCluster *clusterv1.ManagedCluster) {
 		glog.Infof("Updating %s from Insights cluster list", clusterToUpdate)
 		lock.Lock()
 		defer lock.Unlock()
-		m.ClusterNeedsCCX[clusterID] = m.ClusterNeedsCCX[m.ManagedClusterInfo[clusterIdx].ClusterID]
-		delete(m.ClusterNeedsCCX, m.ManagedClusterInfo[clusterIdx].ClusterID)
-		m.ManagedClusterInfo[clusterIdx] = types.ManagedClusterInfo{
-			ClusterID: clusterID,
-			Namespace: clusterToUpdate,
+		if oldCluster, ok := m.ClusterNeedsCCX[m.ManagedClusterInfo[clusterIdx].ClusterID]; ok {
+			m.ClusterNeedsCCX[clusterID] = oldCluster
+			delete(m.ClusterNeedsCCX, m.ManagedClusterInfo[clusterIdx].ClusterID)
+			m.ManagedClusterInfo[clusterIdx] = types.ManagedClusterInfo{
+				ClusterID: clusterID,
+				Namespace: clusterToUpdate,
+			}
 		}
 		return
 	}
