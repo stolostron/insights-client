@@ -35,32 +35,79 @@ func Test_addCluster(t *testing.T) {
 	unmarshalFile("managed-cluster.json", &managedCluster, t)
 	monitor.addCluster(&managedCluster)
 
-	assert.Equal(t, types.ManagedClusterInfo{Namespace: "managed-cluster", ClusterID: "323a00cd-428a-49fb-80ab-201d2a5d3050"}, monitor.ManagedClusterInfo[0], "Test Add ManagedCluster: local-cluster")
+	assert.Equal(t, types.ManagedClusterInfo{Namespace: "managed-cluster", ClusterID: "323a00cd-428a-49fb-80ab-201d2a5d3050"}, monitor.ManagedClusterInfo[0], "Test Add ManagedCluster (MangedClusterInfo): local-cluster")
+	assert.Equal(t, map[string]bool{"323a00cd-428a-49fb-80ab-201d2a5d3050": true}, monitor.ClusterNeedsCCX, "Test Add ManagedCluster (ClusterNeedsCCX): local-cluster")
+
+}
+
+func Test_addCluster_nonOpenshift(t *testing.T) {
+	monitor := NewClusterMonitor()
+	monitor.ManagedClusterInfo = []types.ManagedClusterInfo{}
+	monitor.ClusterNeedsCCX = map[string]bool{}
+	managedCluster := clusterv1.ManagedCluster{}
+	unmarshalFile("managed-cluster-nonopenshift.json", &managedCluster, t)
+	monitor.addCluster(&managedCluster)
+
+	assert.Equal(t, types.ManagedClusterInfo{Namespace: "managed-cluster", ClusterID: "local-cluster-non-openshift"}, monitor.ManagedClusterInfo[0], "Test Add ManagedCluster: local-cluster-non-openshift")
+	assert.Equal(t, map[string]bool{"local-cluster-non-openshift": false}, monitor.ClusterNeedsCCX, "Test Add ManagedCluster (ClusterNeedsCCX): local-cluster-non-openshift")
 
 }
 
 func Test_updateCluster(t *testing.T) {
 	monitor := NewClusterMonitor()
 	monitor.ManagedClusterInfo = []types.ManagedClusterInfo{{Namespace: "managed-cluster", ClusterID: "123a00cd-428a-49fb-80ab-201d2a5d3050"}}
+	monitor.ClusterNeedsCCX = map[string]bool{"123a00cd-428a-49fb-80ab-201d2a5d3050": true}
 	managedCluster := clusterv1.ManagedCluster{}
 	unmarshalFile("managed-cluster.json", &managedCluster, t)
 
 	monitor.updateCluster(&managedCluster)
 
 	assert.Equal(t, types.ManagedClusterInfo{Namespace: "managed-cluster", ClusterID: "323a00cd-428a-49fb-80ab-201d2a5d3050"}, monitor.ManagedClusterInfo[0], "Test Add ManagedCluster: local-cluster")
+	assert.Equal(t, map[string]bool{"323a00cd-428a-49fb-80ab-201d2a5d3050": true}, monitor.ClusterNeedsCCX, "Test Update ManagedCluster (ClusterNeedsCCX): local-cluster")
+
+}
+
+func Test_updateCluster_nonOpenshift(t *testing.T) {
+	monitor := NewClusterMonitor()
+	monitor.ManagedClusterInfo = []types.ManagedClusterInfo{{Namespace: "managed-cluster", ClusterID: "test-cluster-non-openshift"}}
+	monitor.ClusterNeedsCCX = map[string]bool{"test-cluster-non-openshift": false}
+	managedCluster := clusterv1.ManagedCluster{}
+	unmarshalFile("managed-cluster-nonopenshift.json", &managedCluster, t)
+
+	monitor.updateCluster(&managedCluster)
+
+	assert.Equal(t, types.ManagedClusterInfo{Namespace: "managed-cluster", ClusterID: "local-cluster-non-openshift"}, monitor.ManagedClusterInfo[0], "Test Update ManagedCluster: local-cluster-non-openshift")
+	assert.Equal(t, map[string]bool{"local-cluster-non-openshift": false}, monitor.ClusterNeedsCCX, "Test Update ManagedCluster (ClusterNeedsCCX): local-cluster-non-openshift")
 
 }
 
 func Test_deleteCluster(t *testing.T) {
 	monitor := NewClusterMonitor()
 	monitor.ManagedClusterInfo = []types.ManagedClusterInfo{{Namespace: "managed-cluster", ClusterID: "323a00cd-428a-49fb-80ab-201d2a5d3050"}}
+	monitor.ClusterNeedsCCX = map[string]bool{"323a00cd-428a-49fb-80ab-201d2a5d3050": true}
 
 	managedCluster := clusterv1.ManagedCluster{}
 	unmarshalFile("managed-cluster.json", &managedCluster, t)
 
 	monitor.deleteCluster(&managedCluster)
 
-	assert.Equal(t, []types.ManagedClusterInfo{}, monitor.ManagedClusterInfo, "Test Delete ManagedCluster: lmanaged-cluster")
+	assert.Equal(t, []types.ManagedClusterInfo{}, monitor.ManagedClusterInfo, "Test Delete ManagedCluster: managed-cluster")
+	assert.Equal(t, map[string]bool{}, monitor.ClusterNeedsCCX, "Test Delete ManagedCluster: managed-cluster (ClusterNeedsCCX)")
+
+}
+
+func Test_deleteCluster_nonOpenshift(t *testing.T) {
+	monitor := NewClusterMonitor()
+	monitor.ManagedClusterInfo = []types.ManagedClusterInfo{{Namespace: "managed-cluster", ClusterID: "local-cluster-non-openshift"}}
+	monitor.ClusterNeedsCCX = map[string]bool{"local-cluster-non-openshift": false}
+
+	managedCluster := clusterv1.ManagedCluster{}
+	unmarshalFile("managed-cluster-nonopenshift.json", &managedCluster, t)
+
+	monitor.deleteCluster(&managedCluster)
+
+	assert.Equal(t, []types.ManagedClusterInfo{}, monitor.ManagedClusterInfo, "Test Delete ManagedCluster: local-cluster-non-openshift")
+	assert.Equal(t, map[string]bool{}, monitor.ClusterNeedsCCX, "Test Delete ManagedCluster: local-cluster-non-openshift (ClusterNeedsCCX)")
 
 }
 

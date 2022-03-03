@@ -53,6 +53,9 @@ func GetClusterClaimInfo(managedCluster *clusterv1.ManagedCluster) (string, int6
 		if claimInfo.Name == "id.openshift.io" {
 			clusterID = claimInfo.Value
 		}
+		if clusterID == "" && claimInfo.Name == "id.k8s.io" {
+			clusterID = claimInfo.Value
+		}
 	}
 	return clusterVendor, version, clusterID
 }
@@ -60,6 +63,7 @@ func GetClusterClaimInfo(managedCluster *clusterv1.ManagedCluster) (string, int6
 // Monitor struct
 type Monitor struct {
 	ManagedClusterInfo  []types.ManagedClusterInfo
+	ClusterNeedsCCX     map[string]bool
 	ClusterPollInterval time.Duration // How often we want to update managed cluster list
 }
 
@@ -72,6 +76,7 @@ func NewClusterMonitor() *Monitor {
 	}
 	m = &Monitor{
 		ManagedClusterInfo:  []types.ManagedClusterInfo{},
+		ClusterNeedsCCX:     map[string]bool{},
 		ClusterPollInterval: time.Duration(config.Cfg.PollInterval) * time.Minute,
 	}
 	return m
@@ -179,15 +184,24 @@ func (m *Monitor) addCluster(managedCluster *clusterv1.ManagedCluster) {
 		return
 	}
 	clusterVendor, version, clusterID := GetClusterClaimInfo(managedCluster)
+	if clusterID == "" {
+		//cluster not imported properly, do not process
+		return
+	}
+	glog.Infof("Adding %s to all cluster list", managedCluster.GetName())
+	lock.Lock()
+	defer lock.Unlock()
+	m.ManagedClusterInfo = append(m.ManagedClusterInfo, types.ManagedClusterInfo{
+		ClusterID: clusterID,
+		Namespace: managedCluster.GetName(),
+	})
+
 	// We only get Insights for OpenShift clusters versioned 4.x or greater.
 	if clusterVendor == "OpenShift" && version >= 4 {
 		glog.Infof("Adding %s to Insights cluster list", managedCluster.GetName())
-		lock.Lock()
-		defer lock.Unlock()
-		m.ManagedClusterInfo = append(m.ManagedClusterInfo, types.ManagedClusterInfo{
-			ClusterID: clusterID,
-			Namespace: managedCluster.GetName(),
-		})
+		m.ClusterNeedsCCX[clusterID] = true
+	} else {
+		m.ClusterNeedsCCX[clusterID] = false
 	}
 }
 
@@ -210,9 +224,15 @@ func (m *Monitor) updateCluster(managedCluster *clusterv1.ManagedCluster) {
 	if found && clusterID != m.ManagedClusterInfo[clusterIdx].ClusterID {
 		// If the cluster ID has changed update it - otherwise do nothing.
 		glog.Infof("Updating %s from Insights cluster list", clusterToUpdate)
-		m.ManagedClusterInfo[clusterIdx] = types.ManagedClusterInfo{
-			ClusterID: clusterID,
-			Namespace: clusterToUpdate,
+		lock.Lock()
+		defer lock.Unlock()
+		if oldCluster, ok := m.ClusterNeedsCCX[m.ManagedClusterInfo[clusterIdx].ClusterID]; ok {
+			m.ClusterNeedsCCX[clusterID] = oldCluster
+			delete(m.ClusterNeedsCCX, m.ManagedClusterInfo[clusterIdx].ClusterID)
+			m.ManagedClusterInfo[clusterIdx] = types.ManagedClusterInfo{
+				ClusterID: clusterID,
+				Namespace: clusterToUpdate,
+			}
 		}
 		return
 	}
@@ -222,10 +242,7 @@ func (m *Monitor) updateCluster(managedCluster *clusterv1.ManagedCluster) {
 		glog.Infof("Adding %s to Insights cluster list - Cluster was upgraded", managedCluster.GetName())
 		lock.Lock()
 		defer lock.Unlock()
-		m.ManagedClusterInfo = append(m.ManagedClusterInfo, types.ManagedClusterInfo{
-			ClusterID: clusterID,
-			Namespace: managedCluster.GetName(),
-		})
+		m.ClusterNeedsCCX[clusterID] = true
 	}
 }
 
@@ -238,6 +255,7 @@ func (m *Monitor) deleteCluster(managedCluster *clusterv1.ManagedCluster) {
 	for clusterIdx, cluster := range m.ManagedClusterInfo {
 		if clusterToDelete == cluster.Namespace {
 			glog.Infof("Removing %s from Insights cluster list", clusterToDelete)
+			delete(m.ClusterNeedsCCX, m.ManagedClusterInfo[clusterIdx].ClusterID)
 			m.ManagedClusterInfo = append(m.ManagedClusterInfo[:clusterIdx], m.ManagedClusterInfo[clusterIdx+1:]...)
 		}
 	}
@@ -274,6 +292,7 @@ func (m *Monitor) AddLocalCluster(versionObj *unstructured.Unstructured) bool {
 			ClusterID: clusterID,
 			Namespace: localClusterName,
 		})
+		m.ClusterNeedsCCX[clusterID] = true
 		return true
 	}
 
