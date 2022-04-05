@@ -175,21 +175,34 @@ func (r *Retriever) RetrieveCCXReport(
 		glog.Infof("RetrieveCCXReport for cluster %s", cluster.Namespace)
 		req, err := r.CreateInsightsRequest(context.TODO(), r.CCXUrl, cluster, hubID)
 		if err != nil {
-			glog.Warningf("Error creating HttpRequest for cluster %s (%s), %v", cluster.Namespace, cluster.ClusterID, err)
+			handleCCXRequestErr(err, "Error creating HttpRequest for cluster %s (%s), %v", output, cluster)
 			continue
 		}
 		response, err := r.CallInsights(req, cluster)
 		if err != nil {
-			glog.Warningf("Error getting good Response for cluster %s (%s), %v", cluster.Namespace, cluster.ClusterID, err)
+			handleCCXRequestErr(err, "Error getting good Response for cluster %s (%s), %v", output, cluster)
 			continue
 		}
 
 		policyReports, err := r.GetPolicyInfo(response, cluster)
 		if err != nil {
-			glog.Warningf("Error creating PolicyInfo for cluster %s (%s), %v", cluster.Namespace, cluster.ClusterID, err)
+			handleCCXRequestErr(err, "Error creating PolicyInfo for cluster %s (%s), %v", output, cluster)
 			continue
 		}
 		output <- policyReports
+	}
+}
+
+func handleCCXRequestErr(
+	err error,
+	message string,
+	output chan types.ProcessorData,
+	cluster types.ManagedClusterInfo,
+) {
+	glog.Warningf(message, cluster.Namespace, cluster.ClusterID, err)
+	output <- types.ProcessorData{
+		ClusterInfo: cluster,
+		Reports:     types.Reports{},
 	}
 }
 
