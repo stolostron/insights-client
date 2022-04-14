@@ -161,7 +161,7 @@ func (r *Retriever) RetrieveCCXReport(
 		cluster := <-input
 		// If the cluster id is empty do nothing
 		if cluster.Namespace == "" || cluster.ClusterID == "" {
-			return
+			continue
 		}
 
 		if !clusterNeedsCCX(cluster, clusterCCXMap) {
@@ -169,7 +169,7 @@ func (r *Retriever) RetrieveCCXReport(
 				ClusterInfo: cluster,
 				Reports:     types.Reports{},
 			}
-			return
+			continue
 		}
 
 		glog.Infof("RetrieveCCXReport for cluster %s", cluster.Namespace)
