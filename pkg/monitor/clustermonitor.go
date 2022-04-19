@@ -229,7 +229,7 @@ func (m *Monitor) updateCluster(managedCluster *clusterv1.ManagedCluster) {
 		// If the cluster ID has changed update it - otherwise do nothing.
 		glog.Infof("Updating %s from Insights cluster list", clusterToUpdate)
 		if oldCluster, ok := m.ClusterNeedsCCX[m.ManagedClusterInfo[clusterIdx].ClusterID]; ok {
-			glog.Infof("old cluster %s ", oldCluster)
+			glog.Infof("old cluster %t ", oldCluster)
 			m.ClusterNeedsCCX[clusterID] = oldCluster
 			delete(m.ClusterNeedsCCX, m.ManagedClusterInfo[clusterIdx].ClusterID)
 			m.ManagedClusterInfo[clusterIdx] = types.ManagedClusterInfo{
