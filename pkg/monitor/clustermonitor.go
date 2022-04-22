@@ -179,7 +179,6 @@ func (m *Monitor) processCluster(obj interface{}, handlerType string) {
 
 func (m *Monitor) addCluster(managedCluster *clusterv1.ManagedCluster) {
 	glog.V(2).Info("Processing Cluster Addition.")
-	glog.V(2).Infof("Currently mangaging %d clusters.", len(m.ManagedClusterInfo))
 	// We add the local cluster during Initialization.Using the method GetLocalCluster
 	if managedCluster.GetName() == localClusterName {
 		return
@@ -187,7 +186,6 @@ func (m *Monitor) addCluster(managedCluster *clusterv1.ManagedCluster) {
 	clusterVendor, version, clusterID := GetClusterClaimInfo(managedCluster)
 	if clusterID == "" {
 		//cluster not imported properly, do not process
-		glog.V(2).Info("Empty Cluster Id - Skipping Cluster Addition.")
 		return
 	}
 	glog.Infof("Adding %s to all cluster list", managedCluster.GetName())
@@ -197,7 +195,7 @@ func (m *Monitor) addCluster(managedCluster *clusterv1.ManagedCluster) {
 		ClusterID: clusterID,
 		Namespace: managedCluster.GetName(),
 	})
-	glog.V(2).Infof("Currently mangaging %d clusters.", len(m.ManagedClusterInfo))
+
 	// We only get Insights for OpenShift clusters versioned 4.x or greater.
 	if clusterVendor == "OpenShift" && version >= 4 {
 		glog.Infof("Adding %s to Insights cluster list", managedCluster.GetName())
@@ -210,9 +208,7 @@ func (m *Monitor) addCluster(managedCluster *clusterv1.ManagedCluster) {
 // Removes a ManagedCluster resource from ManagedClusterInfo list
 func (m *Monitor) updateCluster(managedCluster *clusterv1.ManagedCluster) {
 	glog.V(2).Info("Processing Cluster Update.")
-	glog.V(2).Infof("Currently mangaging %d clusters.", len(m.ManagedClusterInfo))
-	lock.Lock()
-	defer lock.Unlock()
+
 	clusterToUpdate := managedCluster.GetName()
 	if clusterToUpdate == "local-cluster" {
 		// We get local-clsuter ID from clusterversion resource.
@@ -228,8 +224,9 @@ func (m *Monitor) updateCluster(managedCluster *clusterv1.ManagedCluster) {
 	if found && clusterID != m.ManagedClusterInfo[clusterIdx].ClusterID {
 		// If the cluster ID has changed update it - otherwise do nothing.
 		glog.Infof("Updating %s from Insights cluster list", clusterToUpdate)
+		lock.Lock()
+		defer lock.Unlock()
 		if oldCluster, ok := m.ClusterNeedsCCX[m.ManagedClusterInfo[clusterIdx].ClusterID]; ok {
-			glog.Infof("old cluster %t ", oldCluster)
 			m.ClusterNeedsCCX[clusterID] = oldCluster
 			delete(m.ClusterNeedsCCX, m.ManagedClusterInfo[clusterIdx].ClusterID)
 			m.ManagedClusterInfo[clusterIdx] = types.ManagedClusterInfo{
@@ -241,26 +238,17 @@ func (m *Monitor) updateCluster(managedCluster *clusterv1.ManagedCluster) {
 	}
 
 	// Case to add a ManagedCluster to cluster list after it has been upgraded to version >= 4.X
-	// Or Cluster was missed during Add event
-	if !found && clusterID != "" {
-		glog.Infof("Adding %s to to all cluster list,missed from Add ", managedCluster.GetName())
-		m.ManagedClusterInfo = append(m.ManagedClusterInfo, types.ManagedClusterInfo{
-			ClusterID: clusterID,
-			Namespace: clusterToUpdate,
-		})
-		if clusterVendor == "OpenShift" && version >= 4 {
-			glog.Infof("Adding %s to Insights cluster list", managedCluster.GetName())
-			m.ClusterNeedsCCX[clusterID] = true
-		} else {
-			m.ClusterNeedsCCX[clusterID] = false
-		}
+	if !found && clusterVendor == "OpenShift" && version >= 4 {
+		glog.Infof("Adding %s to Insights cluster list - Cluster was upgraded", managedCluster.GetName())
+		lock.Lock()
+		defer lock.Unlock()
+		m.ClusterNeedsCCX[clusterID] = true
 	}
 }
 
 // Removes a ManagedCluster resource from ManagedClusterInfo list
 func (m *Monitor) deleteCluster(managedCluster *clusterv1.ManagedCluster) {
 	glog.V(2).Info("Processing Cluster Delete.")
-	glog.V(2).Infof("Currently mangaging %d clusters.", len(m.ManagedClusterInfo))
 	lock.Lock()
 	defer lock.Unlock()
 	clusterToDelete := managedCluster.GetName()
@@ -271,7 +259,6 @@ func (m *Monitor) deleteCluster(managedCluster *clusterv1.ManagedCluster) {
 			m.ManagedClusterInfo = append(m.ManagedClusterInfo[:clusterIdx], m.ManagedClusterInfo[clusterIdx+1:]...)
 		}
 	}
-	glog.V(2).Infof("Currently mangaging %d clusters.", len(m.ManagedClusterInfo))
 }
 
 // AddLocalCluster - adds local cluster to Clusters list
@@ -327,6 +314,5 @@ func (m *Monitor) GetLocalCluster() string {
 func (m *Monitor) GetManagedClusterInfo() []types.ManagedClusterInfo {
 	lock.Lock()
 	defer lock.Unlock()
-	glog.V(2).Infof("Total managed clusters in processing list  %d .", len(m.ManagedClusterInfo))
 	return m.ManagedClusterInfo
 }

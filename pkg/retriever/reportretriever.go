@@ -30,10 +30,11 @@ import (
 
 // Retriever struct
 type Retriever struct {
-	CCXUrl     string
-	ContentURL string
-	Client     *http.Client
-	Token      string // token to connect to CRC
+	CCXUrl          string
+	ContentURL      string
+	Client          *http.Client
+	Token           string // token to connect to CRC
+	DisconnectedEnv bool
 }
 
 type serializedAuthMap struct {
@@ -80,20 +81,28 @@ func NewRetriever(ccxurl string, ContentURL string, client *http.Client,
 		ContentURL: ContentURL,
 	}
 	if token == "" {
-		r.setUpRetriever()
+		r.DisconnectedEnv = r.setUpRetriever()
 	} else {
 		r.Token = token
+		r.DisconnectedEnv = false
 	}
 	return r
 }
 
 // Get CRC token , wait until we can get token
-func (r *Retriever) setUpRetriever() {
+func (r *Retriever) setUpRetriever() bool {
 	err := r.StartTokenRefresh()
-	for err != nil {
+	refreshCounter := 0
+	for err != nil || refreshCounter < 12 {
 		glog.Warningf("Unable to get CRC Token: %v", err)
 		time.Sleep(5 * time.Second)
+		refreshCounter += 1
 	}
+	if refreshCounter == 12 {
+		glog.Warning("Could not get token from CCX server after 1 minute, treating env as disconnected")
+		return true
+	}
+	return false
 }
 
 // StartTokenRefresh sets the CRC token for use in Insights queries
@@ -150,12 +159,13 @@ func clusterNeedsCCX(cluster types.ManagedClusterInfo, clusterCCXMap map[string]
 	return needsCCX
 }
 
-// RetrieveCCXReport ...
-func (r *Retriever) RetrieveCCXReport(
+// RetrieveReport ...
+func (r *Retriever) RetrieveReport(
 	hubID string,
 	input chan types.ManagedClusterInfo,
 	output chan types.ProcessorData,
 	clusterCCXMap map[string]bool,
+	isDisconnected bool,
 ) {
 	for {
 		cluster := <-input
@@ -164,7 +174,8 @@ func (r *Retriever) RetrieveCCXReport(
 			continue
 		}
 
-		if !clusterNeedsCCX(cluster, clusterCCXMap) {
+		if !clusterNeedsCCX(cluster, clusterCCXMap) || isDisconnected {
+			glog.Infof("Retrieve Report for cluster %s", cluster.Namespace)
 			output <- types.ProcessorData{
 				ClusterInfo: cluster,
 				Reports:     types.Reports{},
@@ -172,7 +183,7 @@ func (r *Retriever) RetrieveCCXReport(
 			continue
 		}
 
-		glog.Infof("RetrieveCCXReport for cluster %s", cluster.Namespace)
+		glog.Infof("Retrieve CCX Report for cluster %s", cluster.Namespace)
 		req, err := r.CreateInsightsRequest(context.TODO(), r.CCXUrl, cluster, hubID)
 		if err != nil {
 			handleCCXRequestErr(err, "Error creating HttpRequest for cluster %s (%s), %v", output, cluster)
@@ -341,11 +352,11 @@ func (r *Retriever) FetchClusters(
 			if err != nil {
 				glog.Warningf("Unable to get CRC Token, Using previous Token: %v", err)
 			}
-		}
-		if len(ContentsMap) < 1 {
-			r.InitializeContents(hubID, dynamicClient)
-		} else if len(ContentsMap) > 0 && r.GetContentConfigMap(dynamicClient) == nil {
-			r.CreateInsightContentConfigmap(dynamicClient)
+			if len(ContentsMap) < 1 {
+				r.InitializeContents(hubID, dynamicClient)
+			} else if len(ContentsMap) > 0 && r.GetContentConfigMap(dynamicClient) == nil {
+				r.CreateInsightContentConfigmap(dynamicClient)
+			}
 		}
 		if len(monitor.GetManagedClusterInfo()) > 0 {
 			for _, cluster := range monitor.GetManagedClusterInfo() {
