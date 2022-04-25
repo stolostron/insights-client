@@ -93,7 +93,7 @@ func NewRetriever(ccxurl string, ContentURL string, client *http.Client,
 func (r *Retriever) setUpRetriever() bool {
 	err := r.StartTokenRefresh()
 	refreshCounter := 0
-	for err != nil || refreshCounter < 12 {
+	for err != nil && refreshCounter < 12 {
 		glog.Warningf("Unable to get CRC Token: %v", err)
 		time.Sleep(5 * time.Second)
 		refreshCounter += 1
