@@ -190,9 +190,18 @@ func (m *Monitor) addCluster(managedCluster *clusterv1.ManagedCluster) {
 		glog.V(2).Info("Empty Cluster Id - Skipping Cluster Addition.")
 		return
 	}
-	glog.Infof("Adding %s to all cluster list", managedCluster.GetName())
 	lock.Lock()
 	defer lock.Unlock()
+
+	_, found := Find(m.ManagedClusterInfo, types.ManagedClusterInfo{
+		Namespace: managedCluster.GetName(),
+		ClusterID: clusterID,
+	})
+	if found {
+		glog.V(2).Info("Cluster Id Already included- Skipping Cluster Addition.")
+		return
+	}
+	glog.Infof("Adding %s to all cluster list", managedCluster.GetName())
 	m.ManagedClusterInfo = append(m.ManagedClusterInfo, types.ManagedClusterInfo{
 		ClusterID: clusterID,
 		Namespace: managedCluster.GetName(),
@@ -229,7 +238,6 @@ func (m *Monitor) updateCluster(managedCluster *clusterv1.ManagedCluster) {
 		// If the cluster ID has changed update it - otherwise do nothing.
 		glog.Infof("Updating %s from Insights cluster list", clusterToUpdate)
 		if oldCluster, ok := m.ClusterNeedsCCX[m.ManagedClusterInfo[clusterIdx].ClusterID]; ok {
-			glog.Infof("old cluster %t ", oldCluster)
 			m.ClusterNeedsCCX[clusterID] = oldCluster
 			delete(m.ClusterNeedsCCX, m.ManagedClusterInfo[clusterIdx].ClusterID)
 			m.ManagedClusterInfo[clusterIdx] = types.ManagedClusterInfo{
