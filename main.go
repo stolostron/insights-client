@@ -55,24 +55,26 @@ func main() {
 		time.Sleep(2 * time.Second)
 	}
 
-	// Wait until we can create the contents map , which will be used to lookup report details
-	contents := ret.InitializeContents(hubID, dynamicClient)
-	retryCount := 1
-	for contents < 0 {
-		glog.Info("Contents Map not ready. Retrying.")
-		time.Sleep(time.Duration(min(300, retryCount*2)) * time.Second)
-		contents = ret.InitializeContents(hubID, dynamicClient)
-		retryCount++
+	if !ret.DisconnectedEnv {
+		// Wait until we can create the contents map , which will be used to lookup report details
+		contents := ret.InitializeContents(hubID, dynamicClient)
+		retryCount := 1
+		for contents < 0 {
+			glog.Info("Contents Map not ready. Retrying.")
+			time.Sleep(time.Duration(min(300, retryCount*2)) * time.Second)
+			contents = ret.InitializeContents(hubID, dynamicClient)
+			retryCount++
+		}
 	}
 
 	// Fetch the reports for each cluster & create the PolicyReport resources for each violation.
-	go ret.RetrieveCCXReport(hubID, fetchClusterIDs, fetchPolicyReports, monitor.ClusterNeedsCCX)
+	go ret.RetrieveReport(hubID, fetchClusterIDs, fetchPolicyReports, monitor.ClusterNeedsCCX, ret.DisconnectedEnv)
 
 	processor := processor.NewProcessor()
 	go processor.ProcessPolicyReports(fetchPolicyReports, dynamicClient)
 
 	refreshToken := true
-	if config.Cfg.CCXToken != "" {
+	if config.Cfg.CCXToken != "" || ret.DisconnectedEnv {
 		refreshToken = false
 	}
 	//start triggering reports for clusters
