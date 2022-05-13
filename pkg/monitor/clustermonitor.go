@@ -180,10 +180,6 @@ func (m *Monitor) processCluster(obj interface{}, handlerType string) {
 func (m *Monitor) addCluster(managedCluster *clusterv1.ManagedCluster) {
 	glog.V(2).Info("Processing Cluster Addition.")
 	glog.V(2).Infof("Currently mangaging %d clusters.", len(m.ManagedClusterInfo))
-	// We add the local cluster during Initialization.Using the method GetLocalCluster
-	if managedCluster.GetName() == localClusterName {
-		return
-	}
 	clusterVendor, version, clusterID := GetClusterClaimInfo(managedCluster)
 	if clusterID == "" {
 		//cluster not imported properly, do not process
@@ -223,29 +219,39 @@ func (m *Monitor) updateCluster(managedCluster *clusterv1.ManagedCluster) {
 	lock.Lock()
 	defer lock.Unlock()
 	clusterToUpdate := managedCluster.GetName()
-	if clusterToUpdate == "local-cluster" {
-		// We get local-clsuter ID from clusterversion resource.
-		// Dont update the clusterID here as it can be undefined.
-		return
-	}
 
 	clusterVendor, version, clusterID := GetClusterClaimInfo(managedCluster)
 	clusterIdx, found := Find(m.ManagedClusterInfo, types.ManagedClusterInfo{
 		Namespace: clusterToUpdate,
 		ClusterID: clusterID,
 	})
-	if found && clusterID != m.ManagedClusterInfo[clusterIdx].ClusterID {
-		// If the cluster ID has changed update it - otherwise do nothing.
-		glog.Infof("Updating %s from Insights cluster list", clusterToUpdate)
-		if oldCluster, ok := m.ClusterNeedsCCX[m.ManagedClusterInfo[clusterIdx].ClusterID]; ok {
-			m.ClusterNeedsCCX[clusterID] = oldCluster
-			delete(m.ClusterNeedsCCX, m.ManagedClusterInfo[clusterIdx].ClusterID)
-			m.ManagedClusterInfo[clusterIdx] = types.ManagedClusterInfo{
-				ClusterID: clusterID,
-				Namespace: clusterToUpdate,
-			}
-		}
+
+	if clusterToUpdate == "local-cluster" && clusterID == "" {
+		// Don't update the clusterID here if it is undefined.
 		return
+	}
+	if found {
+		if clusterVendor == "OpenShift" && version >= 4 {
+			if ccx, ok := m.ClusterNeedsCCX[clusterID]; ok && !ccx {
+				glog.Infof("Adding %s to Insights cluster list", managedCluster.GetName())
+				m.ClusterNeedsCCX[clusterID] = true
+			}
+		} else {
+			m.ClusterNeedsCCX[clusterID] = false
+		}
+		if clusterID != m.ManagedClusterInfo[clusterIdx].ClusterID {
+			// If the cluster ID has changed update it - otherwise do nothing.
+			glog.Infof("Updating %s from Insights cluster list", clusterToUpdate)
+			if oldCluster, ok := m.ClusterNeedsCCX[m.ManagedClusterInfo[clusterIdx].ClusterID]; ok {
+				m.ClusterNeedsCCX[clusterID] = oldCluster
+				delete(m.ClusterNeedsCCX, m.ManagedClusterInfo[clusterIdx].ClusterID)
+				m.ManagedClusterInfo[clusterIdx] = types.ManagedClusterInfo{
+					ClusterID: clusterID,
+					Namespace: clusterToUpdate,
+				}
+			}
+			return
+		}
 	}
 
 	// Case to add a ManagedCluster to cluster list after it has been upgraded to version >= 4.X

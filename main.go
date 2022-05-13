@@ -38,11 +38,6 @@ func main() {
 	fetchPolicyReports := make(chan types.ProcessorData)
 
 	monitor := monitor.NewClusterMonitor()
-	go monitor.WatchClusters()
-
-	// Set up Retiever and cache the Insights content data
-	ret := retriever.NewRetriever(config.Cfg.CCXServer+"/clusters/reports",
-		config.Cfg.CCXServer+"/content", nil, config.Cfg.CCXToken)
 	//Wait for hub cluster id to make GET API call
 	hubID := "-1"
 	for hubID == "-1" {
@@ -54,6 +49,11 @@ func main() {
 		glog.Info("Waiting for local-cluster Id.")
 		time.Sleep(2 * time.Second)
 	}
+	go monitor.WatchClusters()
+
+	// Set up Retiever and cache the Insights content data
+	ret := retriever.NewRetriever(config.Cfg.CCXServer+"/clusters/reports",
+		config.Cfg.CCXServer+"/content", nil, config.Cfg.CCXToken)
 
 	if !ret.DisconnectedEnv {
 		// Wait until we can create the contents map , which will be used to lookup report details
