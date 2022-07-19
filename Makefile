@@ -30,9 +30,7 @@ build-linux:
 
 .PHONY: lint
 lint:
-	go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.28.3
-	golangci-lint cache clean
-	golangci-lint run --timeout=2m -c .golangci.yml
+	build/run-lint-check.sh
 
 run:
 	 go run main.go
