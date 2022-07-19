@@ -58,3 +58,6 @@ e2e-tests:
 	@echo "Run e2e-tests"
 	./build/run-e2e-tests.sh
 
+.PHONY: test-e2e-prow
+test-e2e-prow:
+	build/run-e2e-tests-prow.sh
