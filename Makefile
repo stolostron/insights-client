@@ -30,8 +30,7 @@ build-linux:
 
 .PHONY: lint
 lint:
-	 go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.38.0
-	 golangci-lint run --timeout=2m
+	build/run-lint-check.sh
 
 run:
 	 go run main.go
@@ -59,3 +58,6 @@ e2e-tests:
 	@echo "Run e2e-tests"
 	./build/run-e2e-tests.sh
 
+.PHONY: test-e2e-prow
+test-e2e-prow:
+	build/run-e2e-tests-prow.sh
