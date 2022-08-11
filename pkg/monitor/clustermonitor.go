@@ -223,7 +223,7 @@ func (m *Monitor) updateCluster(managedCluster *clusterv1.ManagedCluster) {
 	lock.Lock()
 	defer lock.Unlock()
 	clusterToUpdate := managedCluster.GetName()
-	if clusterToUpdate == "local-cluster" {
+	if clusterToUpdate == localClusterName {
 		// We get local-clsuter ID from clusterversion resource.
 		// Dont update the clusterID here as it can be undefined.
 		return
@@ -273,7 +273,7 @@ func (m *Monitor) deleteCluster(managedCluster *clusterv1.ManagedCluster) {
 	defer lock.Unlock()
 	clusterToDelete := managedCluster.GetName()
 	for clusterIdx, cluster := range m.ManagedClusterInfo {
-		if clusterToDelete == cluster.Namespace {
+		if clusterToDelete == cluster.Namespace && clusterToDelete != localClusterName {
 			glog.Infof("Removing %s from Insights cluster list", clusterToDelete)
 			delete(m.ClusterNeedsCCX, m.ManagedClusterInfo[clusterIdx].ClusterID)
 			m.ManagedClusterInfo = append(m.ManagedClusterInfo[:clusterIdx], m.ManagedClusterInfo[clusterIdx+1:]...)
