@@ -31,4 +31,4 @@ POLL_INTERVAL    | no       | 30                                      | 30 minut
 REQUEST_INTERVAL | no       | 1                                       | 1 second Interval between 2 consecutive Insights requests
 CACERT           | no       | Not set                                 | Used for dev & test ONLY
 
-Rebuild: Thu Aug 18 13:02:45 EDT 2022
+Rebuild: 2022-09-16
