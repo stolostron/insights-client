@@ -35,7 +35,7 @@ func Test_addCluster(t *testing.T) {
 	unmarshalFile("managed-cluster.json", &managedCluster, t)
 	monitor.addCluster(&managedCluster)
 
-	assert.Equal(t, types.ManagedClusterInfo{Namespace: "managed-cluster", ClusterID: "323a00cd-428a-49fb-80ab-201d2a5d3050"}, monitor.ManagedClusterInfo[0], "Test Add ManagedCluster (MangedClusterInfo): local-cluster")
+	assert.Equal(t, types.ManagedClusterInfo{Namespace: "managed-cluster", ClusterID: "323a00cd-428a-49fb-80ab-201d2a5d3050"}, monitor.ManagedClusterInfo[0], "Test Add ManagedCluster (ManagedClusterInfo): local-cluster")
 	assert.Equal(t, map[string]bool{"323a00cd-428a-49fb-80ab-201d2a5d3050": true}, monitor.ClusterNeedsCCX, "Test Add ManagedCluster (ClusterNeedsCCX): local-cluster")
 
 }

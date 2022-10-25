@@ -162,7 +162,7 @@ func (m *Monitor) processCluster(obj interface{}, handlerType string) {
 	managedCluster := clusterv1.ManagedCluster{}
 	err = json.Unmarshal(j, &managedCluster)
 	if err != nil {
-		glog.Warning("Failed to Unmarshal MangedCluster", err)
+		glog.Warning("Failed to Unmarshal ManagedCluster", err)
 	}
 
 	switch handlerType {
