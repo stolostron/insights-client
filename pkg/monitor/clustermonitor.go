@@ -23,6 +23,8 @@ import (
 	clusterv1 "open-cluster-management.io/api/cluster/v1"
 )
 
+const IDClusterClaim = "id.k8s.io"
+
 var lock = sync.RWMutex{}
 var localClusterName = "local-cluster"
 
@@ -53,7 +55,7 @@ func GetClusterClaimInfo(managedCluster *clusterv1.ManagedCluster) (string, int6
 		if claimInfo.Name == "id.openshift.io" {
 			clusterID = claimInfo.Value
 		}
-		if clusterID == "" && claimInfo.Name == "id.k8s.io" {
+		if clusterID == "" && claimInfo.Name == IDClusterClaim {
 			clusterID = claimInfo.Value
 		}
 	}
@@ -187,7 +189,9 @@ func (m *Monitor) addCluster(managedCluster *clusterv1.ManagedCluster) {
 	clusterVendor, version, clusterID := GetClusterClaimInfo(managedCluster)
 	if clusterID == "" {
 		//cluster not imported properly, do not process
-		glog.V(2).Info("Empty Cluster Id - Skipping Cluster Addition.")
+		glog.Infof(
+			"Skipping the cluster %s because its %s cluster claim is not set", managedCluster.GetName(), IDClusterClaim,
+		)
 		return
 	}
 	lock.Lock()
