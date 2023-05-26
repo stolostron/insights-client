@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -26,7 +26,7 @@ func TestCallInsights(t *testing.T) {
 	var postBody types.PostBody
 
 	postFunc := func(w http.ResponseWriter, r *http.Request) {
-		body, _ := io.ReadAll(r.Body)
+		body, _ := ioutil.ReadAll(r.Body)
 		err := json.Unmarshal(body, &postBody)
 		if err == nil {
 			w.Header().Set("Content-Type", "application/json")

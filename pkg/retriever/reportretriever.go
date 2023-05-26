@@ -12,7 +12,7 @@ import (
 	"encoding/json"
 	e "errors"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"strings"
@@ -278,13 +278,8 @@ func (r *Retriever) CallInsights(req *http.Request, cluster types.ManagedCluster
 		glog.V(3).Infof("Response header for report %v", req.Header)
 		return types.ResponseBody{}, e.New("No Success HTTP Response code ")
 	}
-	defer func() {
-		closeErr := res.Body.Close()
-		if closeErr != nil {
-			glog.Error("Error closing request body", closeErr)
-		}
-	}()
-	data, _ := io.ReadAll(res.Body)
+	defer res.Body.Close()
+	data, _ := ioutil.ReadAll(res.Body)
 	// unmarshal response data into the ResponseBody struct
 	unmarshalError := json.Unmarshal(data, &responseBody)
 	if unmarshalError != nil {
