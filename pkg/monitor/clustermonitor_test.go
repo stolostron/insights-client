@@ -5,7 +5,7 @@ package monitor
 import (
 	"encoding/json"
 	"errors"
-	"os"
+	"io/ioutil"
 	"testing"
 
 	sanitize "github.com/kennygrant/sanitize"
@@ -17,7 +17,7 @@ import (
 
 func unmarshalFile(filepath string, resourceType interface{}, t *testing.T) {
 	// open given filepath string
-	rawBytes, err := os.ReadFile("../../test-data/" + sanitize.Name(filepath))
+	rawBytes, err := ioutil.ReadFile("../../test-data/" + sanitize.Name(filepath))
 	if err != nil {
 		t.Fatal("Unable to read test data", err)
 	}
