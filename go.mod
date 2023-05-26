@@ -1,6 +1,6 @@
 module github.com/stolostron/insights-client
 
-go 1.20
+go 1.18
 
 require (
 	github.com/go-logr/logr v1.2.4 // indirect
