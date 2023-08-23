@@ -7,7 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	e "errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"sync"
 
@@ -93,7 +93,7 @@ func (r *Retriever) CallContents(req *http.Request) (types.ContentsResponse, err
 		return types.ContentsResponse{}, e.New("No Success HTTP Response code ")
 	}
 	defer res.Body.Close()
-	data, _ := ioutil.ReadAll(res.Body)
+	data, _ := io.ReadAll(res.Body)
 	// unmarshal response data into the ResponseBody struct
 	unmarshalError := json.Unmarshal(data, &responseBody)
 	if unmarshalError != nil {
