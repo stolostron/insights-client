@@ -4,7 +4,6 @@ package mocks
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,7 +18,7 @@ func GetMockData(clusterId string) []byte {
 	if !strings.HasPrefix(cleanFile, "../utils") {
 		panic(fmt.Errorf("Unsafe input"))
 	}
-	mock_data, err := ioutil.ReadFile(cleanFile)
+	mock_data, err := os.ReadFile(cleanFile)
 	if err != nil {
 		pwd, _ := os.Getwd()
 		glog.Errorf("Error opening %s.json file in the dir %s ", clusterId, pwd)
@@ -34,7 +33,7 @@ func GetMockContent() []byte {
 	if !strings.HasPrefix(cleanFile, "../utils") {
 		panic(fmt.Errorf("Unsafe input"))
 	}
-	mock_data, err := ioutil.ReadFile(cleanFile)
+	mock_data, err := os.ReadFile(cleanFile)
 	if err != nil {
 		pwd, _ := os.Getwd()
 		glog.Errorf("Error opening content.json file in the dir %s ", pwd)
