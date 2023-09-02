@@ -198,24 +198,24 @@ func getGovernanceResults(dynamicClient dynamic.Interface, clusterInfo types.Man
 		// Parse relevant policy fields
 		plcName := plc.GetName()
 		category := plc.GetAnnotations()["policy.open-cluster-management.io/categories"]
-		md, _, err := unstructured.NestedMap(plc.Object, "metadata")
+		creationTimestamp, _, err := unstructured.NestedString(plc.Object, "metadata", "creationTimestamp")
 		if err != nil {
-			glog.Warningf("error parsing metadata as a map for policy %s: %s", plcName, err)
+			glog.Warningf("error parsing creation timestamp as a string for policy %s: %s", plcName, err)
 			continue
 		}
-		status, _, err := unstructured.NestedMap(plc.Object, "status")
-		if err != nil {
-			glog.Warningf("error parsing status as a map for policy %s: %s", plcName, err)
-			continue
-		}
-		details, _, err := unstructured.NestedSlice(status, "details")
+		details, _, err := unstructured.NestedSlice(plc.Object, "status", "details")
 		if err != nil {
 			glog.Warningf("error parsing status details as a map for policy %s: %s", plcName, err)
 			continue
 		}
+		compliance, _, err := unstructured.NestedString(plc.Object, "status", "compliant")
+		if err != nil {
+			glog.Warningf("error parsing status compliance as a string for policy %s: %s", plcName, err)
+			continue
+		}
 
 		// Only create a violation if the policy is non-compliant
-		if status["compliant"].(string) != "NonCompliant" {
+		if compliance != "NonCompliant" {
 			continue
 		}
 
@@ -263,7 +263,7 @@ func getGovernanceResults(dynamicClient dynamic.Interface, clusterInfo types.Man
 				Timestamp:   metav1.Timestamp{Seconds: time.Now().Unix(), Nanos: int32(time.Now().UnixNano())},
 				Result:      "fail",
 				Properties: map[string]string{
-					"created_at": md["creationTimestamp"].(string),
+					"created_at": creationTimestamp,
 					"total_risk": convertSevFromGovernance(getSevFromTemplate(plc, plcTemplateName)),
 				},
 			})
