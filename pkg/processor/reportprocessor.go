@@ -320,7 +320,16 @@ func getSevFromTemplate(plc unstructured.Unstructured, name string) string {
 			return severity
 
 			// If this isn't an OCM policy, check for a severity annotation
-		} else if severityAnnotation, ok := plc.GetAnnotations()["policy.open-cluster-management.io/severity"]; ok {
+		} else {
+			severityAnnotation, severityFound, err := unstructured.NestedString(
+				objDef, "metadata", "annotations", "policy.open-cluster-management.io/severity",
+			)
+			if !severityFound || err != nil {
+				glog.V(1).Infof(
+					"error parsing objectDefinition severity annotation as a string for policy %s, template %d: %s", plcName, idx, err)
+				break
+			}
+
 			return severityAnnotation
 		}
 	}
