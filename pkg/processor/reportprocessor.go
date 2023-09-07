@@ -264,7 +264,7 @@ func getGovernanceResults(dynamicClient dynamic.Interface, clusterInfo types.Man
 				Result:      "fail",
 				Properties: map[string]string{
 					"created_at": creationTimestamp,
-					"total_risk": convertSevFromGovernance(getSevFromTemplate(plc, plcTemplateName)),
+					"total_risk": convertSevFromGovernance(getSevFromTemplate(plc, plcTemplateName, idx)),
 				},
 			})
 		}
@@ -273,69 +273,83 @@ func getGovernanceResults(dynamicClient dynamic.Interface, clusterInfo types.Man
 }
 
 // getSevFromTemplate pulls the severity for the specified policy template from the spec
-func getSevFromTemplate(plc unstructured.Unstructured, name string) string {
+func getSevFromTemplate(plc unstructured.Unstructured, name string, statusIndex int) string {
 	plcName := plc.GetName()
 	// Parse policy templates
 	plcTemplates, _, err := unstructured.NestedSlice(plc.Object, "spec", "policy-templates")
 	if err != nil {
-		glog.Warningf("error parsing policy-templates as a map for policy %s: %s", plcName, err)
+		glog.Warningf("error parsing policy-templates as a slice for policy %s: %s", plcName, err)
 		return ""
 	}
 
-	for idx, template := range plcTemplates {
-		// Find policy template with matching policy name
-		objDef, _, err := unstructured.NestedMap(template.(map[string]interface{}), "objectDefinition")
-		if err != nil {
-			glog.Warningf("error parsing objectDefinition as a map for policy %s, template %d: %s", plcName, idx, err)
-			continue
-		}
-		objDefName, _, err := unstructured.NestedString(objDef, "metadata", "name")
-		if err != nil {
-			glog.Warningf("error parsing objectDefinition name as a string for policy %s, template %d: %s", plcName, idx, err)
-			continue
-		}
-
-		// Skip if the name doesn't match
-		if objDefName != name {
-			continue
-		}
-
-		// Check API group
-		apiVersion, _, err := unstructured.NestedString(objDef, "apiVersion")
-		if err != nil {
-			glog.Warningf(
-				"error parsing objectDefinition apiVersion as a string for policy %s, template %d: %s", plcName, idx, err)
-			break
-		}
-
-		// Handle OCM policies
-		if strings.Split(apiVersion, "/")[0] == policyGvr.Group {
-			severity, _, err := unstructured.NestedString(objDef, "spec", "severity")
-			if err != nil {
-				glog.Warningf(
-					"error parsing severity for policy %s, template %d: %s", plcName, idx, err)
-				break
-			}
-
-			return severity
-
-			// If this isn't an OCM policy, check for a severity annotation
-		} else {
-			severityAnnotation, severityFound, err := unstructured.NestedString(
-				objDef, "metadata", "annotations", "policy.open-cluster-management.io/severity",
-			)
-			if !severityFound || err != nil {
-				glog.V(1).Infof(
-					"error parsing objectDefinition severity annotation as a string for policy %s, template %d: %s", plcName, idx, err)
-				break
-			}
-
-			return severityAnnotation
-		}
+	// Bail if the provided index is out of range
+	if len(plcTemplates) <= statusIndex {
+		glog.Warningf("provided index %d from the status is out of range for policy %s policy-templates",
+			statusIndex, plcName)
+		return ""
 	}
 
-	// Return an empty string if the severity wasn't set or the policy wasn't found
-	return ""
+	var template map[string]interface{}
+	var ok bool
+	if template, ok = plcTemplates[statusIndex].(map[string]interface{}); !ok {
+		glog.Warningf("error parsing policy-template as a map for policy %s, template %d", plcName, statusIndex)
+		return ""
+	}
+
+	objDef, _, err := unstructured.NestedMap(template, "objectDefinition")
+	if err != nil {
+		glog.Warningf("error parsing objectDefinition as a map for policy %s, template %d: %s",
+			plcName, statusIndex, err)
+		return ""
+	}
+
+	// Ensure policy template has matching policy name
+	objDefName, _, err := unstructured.NestedString(objDef, "metadata", "name")
+	if err != nil {
+		glog.Warningf("error parsing objectDefinition name as a string for policy %s, template %d: %s",
+			plcName, statusIndex, err)
+		return ""
+	}
+
+	if objDefName != name {
+		glog.Warningf("provided name '%s' from the status doesn't match '%s' for policy %s, template %d",
+			name, objDefName, plcName, statusIndex)
+		return ""
+	}
+
+	// Parse API group (for determining severity location)
+	apiVersion, _, err := unstructured.NestedString(objDef, "apiVersion")
+	if err != nil {
+		glog.Warningf(
+			"error parsing objectDefinition apiVersion as a string for policy %s, template %d: %s",
+			plcName, statusIndex, err)
+		return ""
+	}
+
+	// Handle OCM policies
+	if strings.Split(apiVersion, "/")[0] == policyGvr.Group {
+		severity, _, err := unstructured.NestedString(objDef, "spec", "severity")
+		if err != nil {
+			glog.Warningf(
+				"error parsing severity for policy %s, template %d: %s", plcName, statusIndex, err)
+			return ""
+		}
+
+		return severity
+	}
+
+	// If this isn't an OCM policy, check for a severity annotation
+	severityAnnotation, severityFound, err := unstructured.NestedString(
+		objDef, "metadata", "annotations", "policy.open-cluster-management.io/severity",
+	)
+	if !severityFound || err != nil {
+		glog.V(1).Infof(
+			"error parsing objectDefinition severity annotation as a string for policy %s, template %d: %s",
+			plcName, statusIndex, err)
+		return ""
+	}
+
+	return severityAnnotation
 }
 
 func createPolicyReport(
