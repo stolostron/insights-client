@@ -253,6 +253,19 @@ func getGovernanceResults(dynamicClient dynamic.Interface, clusterInfo types.Man
 				continue
 			}
 
+			timeString, _, err := unstructured.NestedString(historyItems[0].(map[string]interface{}), "lastTimestamp")
+			if err != nil {
+				glog.Warningf(
+					"error parsing compliance lastTimestamp as a string for policy %s, template %d: %s", plcName, idx, err)
+				continue
+			}
+			timestamp, err := time.Parse(time.RFC3339, timeString)
+			if err != nil {
+				glog.Warningf(
+					"error parsing compliance lastTimestamp into a time value for policy %s, template %d: %s", plcName, idx, err)
+				continue
+			}
+
 			// Append violation to policy report results
 			clusterViolations = append(clusterViolations, &v1alpha2.PolicyReportResult{
 				Policy:      plcName,
@@ -260,7 +273,7 @@ func getGovernanceResults(dynamicClient dynamic.Interface, clusterInfo types.Man
 				Scored:      false,
 				Category:    category,
 				Source:      "grc",
-				Timestamp:   metav1.Timestamp{Seconds: time.Now().Unix(), Nanos: int32(time.Now().UnixNano())},
+				Timestamp:   metav1.Timestamp{Seconds: timestamp.Unix()},
 				Result:      "fail",
 				Properties: map[string]string{
 					"created_at": creationTimestamp,
