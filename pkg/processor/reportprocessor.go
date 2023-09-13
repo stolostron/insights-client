@@ -159,6 +159,7 @@ func (p *Processor) createUpdatePolicyReports(input chan types.ProcessorData, dy
 }
 
 func convertSevFromGovernance(policySev string) string {
+	policySev = strings.ToLower(policySev)
 	sevMapping := map[string]interface{}{
 		"critical": "4",
 		"high":     "3",
@@ -171,9 +172,9 @@ func convertSevFromGovernance(policySev string) string {
 	return "0"
 }
 
-//getGovernanceResults creates a result object for each policy violation in the cluster
+// getGovernanceResults creates a result object for each policy violation in the cluster
 func getGovernanceResults(dynamicClient dynamic.Interface, clusterInfo types.ManagedClusterInfo) []*v1alpha2.PolicyReportResult {
-	glog.V(2).Infof(
+	glog.V(1).Infof(
 		"Getting policy violations for cluster %s (%s)",
 		clusterInfo.Namespace,
 		clusterInfo.ClusterID,
@@ -182,7 +183,7 @@ func getGovernanceResults(dynamicClient dynamic.Interface, clusterInfo types.Man
 	res := dynamicClient.Resource(policyGvr).Namespace(clusterInfo.Namespace)
 	policyList, err := res.List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
-		glog.V(2).Infof(
+		glog.Warningf(
 			"Error getting policy data for cluster %s (%s)",
 			clusterInfo.Namespace,
 			clusterInfo.ClusterID,
@@ -191,68 +192,170 @@ func getGovernanceResults(dynamicClient dynamic.Interface, clusterInfo types.Man
 	}
 
 	var clusterViolations []*v1alpha2.PolicyReportResult
-	for _, plc := range policyList.Items {
-		plcName := plc.Object["metadata"].(map[string]interface{})["name"].(string)
-		func() {
-			defer func() {
-				if err := recover(); err != nil {
-					glog.V(2).Infof(
-						"Error processing policy %s - expected missing data to be present",
-						plcName,
-					)
-				}
-			}()
 
-			md := plc.Object["metadata"].(map[string]interface{})
-			status := plc.Object["status"].(map[string]interface{})
-			details := status["details"].([]interface{})
-			if status["compliant"].(string) == "NonCompliant" {
-				for _, detail := range details {
-					if detail.(map[string]interface{})["compliant"] == "NonCompliant" {
-						templateMeta := detail.(map[string]interface{})["templateMeta"].(map[string]interface{})
-						historyItem := detail.(map[string]interface{})["history"].([]interface{})[0].(map[string]interface{})
-						annotations := md["annotations"].(map[string]interface{})
-						category := ""
-						if _, ok := annotations["policy.open-cluster-management.io/categories"]; ok {
-							category = annotations["policy.open-cluster-management.io/categories"].(string)
-						}
-						clusterViolations = append(clusterViolations, &v1alpha2.PolicyReportResult{
-							Policy:      md["name"].(string),
-							Description: historyItem["message"].(string),
-							Scored:      false,
-							Category:    category,
-							Source:      "grc",
-							Timestamp:   metav1.Timestamp{Seconds: time.Now().Unix(), Nanos: int32(time.Now().UnixNano())},
-							Result:      "fail",
-							Properties: map[string]string{
-								"created_at": md["creationTimestamp"].(string),
-								"total_risk": convertSevFromGovernance(getSevFromTemplate(plc, templateMeta["name"].(string))),
-							},
-						})
-					}
-				}
+	// Iterate over policies in the cluster
+	for _, plc := range policyList.Items {
+		// Parse relevant policy fields
+		plcName := plc.GetName()
+		category := plc.GetAnnotations()["policy.open-cluster-management.io/categories"]
+		creationTimestamp, _, err := unstructured.NestedString(plc.Object, "metadata", "creationTimestamp")
+		if err != nil {
+			glog.Warningf("error parsing creation timestamp as a string for policy %s: %s", plcName, err)
+			continue
+		}
+		details, _, err := unstructured.NestedSlice(plc.Object, "status", "details")
+		if err != nil {
+			glog.Warningf("error parsing status details as a map for policy %s: %s", plcName, err)
+			continue
+		}
+		compliance, _, err := unstructured.NestedString(plc.Object, "status", "compliant")
+		if err != nil {
+			glog.Warningf("error parsing status compliance as a string for policy %s: %s", plcName, err)
+			continue
+		}
+
+		// Only create a violation if the policy is non-compliant
+		if compliance != "NonCompliant" {
+			continue
+		}
+
+		// Generate a cluster policy report result for each non-compliant policy template within the root policy
+		for idx, detail := range details {
+			var detailMap map[string]interface{}
+			var ok bool
+			if detailMap, ok = detail.(map[string]interface{}); !ok {
+				glog.Warningf("failed to parse history detail as a map for policy %s, template %d", plcName, idx)
+				continue
 			}
-		}()
+
+			// Only create a violation if the policy template is non-compliant
+			if detailMap["compliant"] != "NonCompliant" {
+				continue
+			}
+
+			// Parse relevant status fields for the policy template
+			plcTemplateName, _, err := unstructured.NestedString(detailMap, "templateMeta", "name")
+			if err != nil {
+				glog.Warningf(
+					"error parsing policy template name as a string for policy %s, template %d: %s", plcName, idx, err)
+				continue
+			}
+			historyItems, _, err := unstructured.NestedSlice(detailMap, "history")
+			glog.V(1).Infof("error parsing history as a slice for policy %s, template %d: %s", plcName, idx, err)
+			if len(historyItems) == 0 {
+				glog.Warningf("history is empty for policy %s, template %d", plcName, idx)
+				continue
+			}
+			message, _, err := unstructured.NestedString(historyItems[0].(map[string]interface{}), "message")
+			if err != nil {
+				glog.Warningf(
+					"error parsing compliance message as a string for policy %s, template %d: %s", plcName, idx, err)
+				continue
+			}
+
+			// Append violation to policy report results
+			clusterViolations = append(clusterViolations, &v1alpha2.PolicyReportResult{
+				Policy:      plcName,
+				Description: message,
+				Scored:      false,
+				Category:    category,
+				Source:      "grc",
+				Timestamp:   metav1.Timestamp{Seconds: time.Now().Unix(), Nanos: int32(time.Now().UnixNano())},
+				Result:      "fail",
+				Properties: map[string]string{
+					"created_at": creationTimestamp,
+					"total_risk": convertSevFromGovernance(getSevFromTemplate(plc, plcTemplateName, idx)),
+				},
+			})
+		}
 	}
 	return clusterViolations
 }
 
-//getSevFromTemplate pulls the severity for the specified policy template from the spec
-func getSevFromTemplate(plc unstructured.Unstructured, name string) string {
-	plcTemplates := plc.Object["spec"].(map[string]interface{})["policy-templates"].([]interface{})
-	for _, template := range plcTemplates {
-		objDef := template.(map[string]interface{})["objectDefinition"].(map[string]interface{})
-		if objDef["metadata"].(map[string]interface{})["name"] == name {
-			return strings.ToLower(objDef["spec"].(map[string]interface{})["severity"].(string))
-		}
+// getSevFromTemplate pulls the severity for the specified policy template from the spec
+func getSevFromTemplate(plc unstructured.Unstructured, name string, statusIndex int) string {
+	plcName := plc.GetName()
+	// Parse policy templates
+	plcTemplates, _, err := unstructured.NestedSlice(plc.Object, "spec", "policy-templates")
+	if err != nil {
+		glog.Warningf("error parsing policy-templates as a slice for policy %s: %s", plcName, err)
+		return ""
 	}
-	return ""
+
+	// Bail if the provided index is out of range
+	if len(plcTemplates) <= statusIndex {
+		glog.Warningf("provided index %d from the status is out of range for policy %s policy-templates",
+			statusIndex, plcName)
+		return ""
+	}
+
+	var template map[string]interface{}
+	var ok bool
+	if template, ok = plcTemplates[statusIndex].(map[string]interface{}); !ok {
+		glog.Warningf("error parsing policy-template as a map for policy %s, template %d", plcName, statusIndex)
+		return ""
+	}
+
+	objDef, _, err := unstructured.NestedMap(template, "objectDefinition")
+	if err != nil {
+		glog.Warningf("error parsing objectDefinition as a map for policy %s, template %d: %s",
+			plcName, statusIndex, err)
+		return ""
+	}
+
+	// Ensure policy template has matching policy name
+	objDefName, _, err := unstructured.NestedString(objDef, "metadata", "name")
+	if err != nil {
+		glog.Warningf("error parsing objectDefinition name as a string for policy %s, template %d: %s",
+			plcName, statusIndex, err)
+		return ""
+	}
+
+	if objDefName != name {
+		glog.Warningf("provided name '%s' from the status doesn't match '%s' for policy %s, template %d",
+			name, objDefName, plcName, statusIndex)
+		return ""
+	}
+
+	// Parse API group (for determining severity location)
+	apiVersion, _, err := unstructured.NestedString(objDef, "apiVersion")
+	if err != nil {
+		glog.Warningf(
+			"error parsing objectDefinition apiVersion as a string for policy %s, template %d: %s",
+			plcName, statusIndex, err)
+		return ""
+	}
+
+	// Handle OCM policies
+	if strings.Split(apiVersion, "/")[0] == policyGvr.Group {
+		severity, _, err := unstructured.NestedString(objDef, "spec", "severity")
+		if err != nil {
+			glog.Warningf(
+				"error parsing severity for policy %s, template %d: %s", plcName, statusIndex, err)
+			return ""
+		}
+
+		return severity
+	}
+
+	// If this isn't an OCM policy, check for a severity annotation
+	severityAnnotation, severityFound, err := unstructured.NestedString(
+		objDef, "metadata", "annotations", "policy.open-cluster-management.io/severity",
+	)
+	if !severityFound || err != nil {
+		glog.V(1).Infof(
+			"error parsing objectDefinition severity annotation as a string for policy %s, template %d: %s",
+			plcName, statusIndex, err)
+		return ""
+	}
+
+	return severityAnnotation
 }
 
 func createPolicyReport(
 	clusterViolations []*v1alpha2.PolicyReportResult,
 	clusterInfo types.ManagedClusterInfo, dynamicClient dynamic.Interface) {
-	glog.V(2).Infof(
+	glog.V(1).Infof(
 		"Starting createPolicyReport for cluster %s (%s)",
 		clusterInfo.Namespace,
 		clusterInfo.ClusterID,
@@ -294,7 +397,7 @@ func createPolicyReport(
 	)
 
 	if err != nil {
-		glog.Infof(
+		glog.Warningf(
 			"Could not create PolicyReport for cluster %s (%s): %v",
 			clusterInfo.Namespace,
 			clusterInfo.ClusterID,
