@@ -111,7 +111,10 @@ func (m *Monitor) WatchClusters() {
 	}
 
 	// Add Handler to Informer
-	managedClusterInformer.AddEventHandler(handlers)
+	_, managedClusterErr := managedClusterInformer.AddEventHandler(handlers)
+	if managedClusterErr != nil {
+		glog.Error("Error adding eventHandler for managedCluster: ", err)
+	}
 
 	// Periodically check if the ManagedCluster resource exists
 	go m.stopAndStartInformer("cluster.open-cluster-management.io/v1", managedClusterInformer)
@@ -335,7 +338,7 @@ func (m *Monitor) GetLocalCluster() string {
 	return ""
 }
 
-//Getter for ManagedClusterInfo
+// Getter for ManagedClusterInfo
 func (m *Monitor) GetManagedClusterInfo() []types.ManagedClusterInfo {
 	lock.Lock()
 	defer lock.Unlock()
