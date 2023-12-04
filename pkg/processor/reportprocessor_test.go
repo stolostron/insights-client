@@ -19,7 +19,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	dynamicfakeclient "k8s.io/client-go/dynamic/fake"
@@ -40,13 +39,15 @@ func UnmarshalFile(filepath string, resourceType interface{}, t *testing.T) {
 	}
 }
 
-var fetchPolicyReports chan types.ProcessorData
-var mngd types.ManagedClusterInfo
-var fakeDynamicClient *dynamicfakeclient.FakeDynamicClient
-var namespace *corev1.Namespace
-var ret *retriever.Retriever
-var respBody types.ResponseBody
-var processor *Processor
+var (
+	fetchPolicyReports chan types.ProcessorData
+	mngd               types.ManagedClusterInfo
+	fakeDynamicClient  *dynamicfakeclient.FakeDynamicClient
+	namespace          *corev1.Namespace
+	ret                *retriever.Retriever
+	respBody           types.ResponseBody
+	processor          *Processor
+)
 
 func setUp(t *testing.T) {
 	fetchPolicyReports = make(chan types.ProcessorData, 1)
@@ -88,7 +89,6 @@ func setUp(t *testing.T) {
 
 	processor = NewProcessor()
 	fmt.Println("Setup complete")
-
 }
 
 func addReportToChannel(t *testing.T, filename string) {
@@ -99,6 +99,7 @@ func addReportToChannel(t *testing.T, filename string) {
 	}
 	fetchPolicyReports <- policyReports
 }
+
 func Test_createPolicyReport(t *testing.T) {
 	setUp(t)
 	addReportToChannel(t, "createreporttest.json")
@@ -106,8 +107,8 @@ func Test_createPolicyReport(t *testing.T) {
 	processor.createUpdatePolicyReports(fetchPolicyReports, fakeDynamicClient)
 	createdPolicyReport := &v1alpha2.PolicyReport{}
 
-	//Check if the policyReport is created
-	unstructuredPolR, err := fakeDynamicClient.Resource(policyReportGvr).Namespace(mngd.Namespace).Get(context.TODO(), mngd.Namespace+"-policyreport", v1.GetOptions{})
+	// Check if the policyReport is created
+	unstructuredPolR, err := fakeDynamicClient.Resource(policyReportGvr).Namespace(mngd.Namespace).Get(context.TODO(), mngd.Namespace+"-policyreport", metav1.GetOptions{})
 	if err != nil {
 		t.Log(err)
 	}
