@@ -13,9 +13,9 @@ require (
 	github.com/stretchr/testify v1.8.2
 	golang.org/x/net v0.13.0 // indirect
 	golang.org/x/oauth2 v0.8.0 // indirect
-	golang.org/x/sys v0.10.0 // indirect
-	golang.org/x/term v0.10.0 // indirect
-	golang.org/x/text v0.11.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
+	golang.org/x/term v0.13.0 // indirect
+	golang.org/x/text v0.13.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	k8s.io/api v0.28.2
 	k8s.io/apimachinery v0.28.2
@@ -60,3 +60,5 @@ require (
 )
 
 replace golang.org/x/crypto => golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d
+
+replace golang.org/x/net => golang.org/x/net v0.17.0 // CVE-2023-39325
