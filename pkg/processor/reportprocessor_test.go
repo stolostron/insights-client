@@ -23,7 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	dynamicfakeclient "k8s.io/client-go/dynamic/fake"
-	"sigs.k8s.io/wg-policy-prototypes/policy-report/pkg/api/wgpolicyk8s.io/v1alpha2"
+	"sigs.k8s.io/wg-policy-prototypes/policy-report/pkg/api/wgpolicyk8s.io/v1beta1"
 )
 
 func UnmarshalFile(filepath string, resourceType interface{}, t *testing.T) {
@@ -74,7 +74,7 @@ func setUp(t *testing.T) {
 
 	scheme := runtime.NewScheme()
 	scheme.AddKnownTypes(corev1.SchemeGroupVersion, &corev1.Namespace{})
-	scheme.AddKnownTypes(v1alpha2.SchemeGroupVersion, &v1alpha2.PolicyReport{})
+	scheme.AddKnownTypes(v1beta1.SchemeGroupVersion, &v1beta1.PolicyReport{})
 
 	gvrToListKind := map[schema.GroupVersionResource]string{policyGvr: "PolicyList"}
 
@@ -275,7 +275,7 @@ func Test_createPolicyReport(t *testing.T) {
 	addReportToChannel(t, "createreporttest.json")
 
 	processor.createUpdatePolicyReports(fetchPolicyReports, fakeDynamicClient)
-	createdPolicyReport := &v1alpha2.PolicyReport{}
+	createdPolicyReport := &v1beta1.PolicyReport{}
 
 	// Check if the policyReport is created
 	unstructuredPolR, err := fakeDynamicClient.Resource(policyReportGvr).Namespace(mngd.Namespace).Get(context.TODO(), mngd.Namespace+"-policyreport", metav1.GetOptions{})
@@ -296,7 +296,7 @@ func Test_createPolicyReport(t *testing.T) {
 	assert.Equal(t, 4, len(createdPolicyReport.Results), "Expected 3 issues to be found. Got %v", len(createdPolicyReport.Results))
 
 	policyResult1 := createdPolicyReport.Results[2]
-	expectedPolicyResult1 := v1alpha2.PolicyReportResult{
+	expectedPolicyResult1 := v1beta1.PolicyReportResult{
 		Source:      "grc",
 		Policy:      "default.policy1",
 		Category:    "CM Configuration Management",
@@ -309,10 +309,10 @@ func Test_createPolicyReport(t *testing.T) {
 		},
 	}
 
-	assert.Equal(t, expectedPolicyResult1, *policyResult1)
+	assert.Equal(t, expectedPolicyResult1, policyResult1)
 
 	policyResult2 := createdPolicyReport.Results[3]
-	expectedPolicyResult2 := v1alpha2.PolicyReportResult{
+	expectedPolicyResult2 := v1beta1.PolicyReportResult{
 		Source:      "grc",
 		Policy:      "default.policy1",
 		Category:    "CM Configuration Management",
@@ -325,7 +325,7 @@ func Test_createPolicyReport(t *testing.T) {
 		},
 	}
 
-	assert.Equal(t, expectedPolicyResult2, *policyResult2)
+	assert.Equal(t, expectedPolicyResult2, policyResult2)
 }
 
 func Test_filterOpenshiftCategory(t *testing.T) {
