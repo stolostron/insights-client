@@ -20,7 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8sTypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
-	"sigs.k8s.io/wg-policy-prototypes/policy-report/pkg/api/wgpolicyk8s.io/v1alpha2"
+	"sigs.k8s.io/wg-policy-prototypes/policy-report/pkg/api/wgpolicyk8s.io/v1beta1"
 )
 
 var prSuffix = "-policyreport"
@@ -31,7 +31,7 @@ type Processor struct {
 
 var policyReportGvr = schema.GroupVersionResource{
 	Group:    "wgpolicyk8s.io",
-	Version:  "v1alpha2",
+	Version:  "v1beta1",
 	Resource: "policyreports",
 }
 
@@ -61,8 +61,8 @@ func FilterOpenshiftCategory(categories []string) string {
 func getPolicyReportResults(
 	reports []types.ReportData,
 	clusterInfo types.ManagedClusterInfo,
-) []*v1alpha2.PolicyReportResult {
-	var clusterViolations []*v1alpha2.PolicyReportResult
+) []v1beta1.PolicyReportResult {
+	var clusterViolations []v1beta1.PolicyReportResult
 	for _, report := range reports {
 		// Find the correct Insight content data from cache
 		reportContentData := retriever.ContentsMap[report.Key]
@@ -74,7 +74,7 @@ func getPolicyReportResults(
 			reportContentDataBytes, _ := json.Marshal(reportContentData)
 			unmarshalError := json.Unmarshal(reportContentDataBytes, &contentData)
 			if unmarshalError == nil {
-				clusterViolations = append(clusterViolations, &v1alpha2.PolicyReportResult{
+				clusterViolations = append(clusterViolations, v1beta1.PolicyReportResult{
 					Policy:      report.Key,
 					Description: contentData.Description,
 					Scored:      false,
@@ -111,7 +111,7 @@ func (p *Processor) createUpdatePolicyReports(input chan types.ProcessorData, dy
 		return
 	}
 
-	currentPolicyReport := v1alpha2.PolicyReport{}
+	currentPolicyReport := v1beta1.PolicyReport{}
 	policyReportRes, _ := dynamicClient.Resource(policyReportGvr).Namespace(data.ClusterInfo.Namespace).Get(
 		context.TODO(),
 		data.ClusterInfo.Namespace+prSuffix,
@@ -173,7 +173,7 @@ func convertSevFromGovernance(policySev string) string {
 }
 
 // getGovernanceResults creates a result object for each policy violation in the cluster
-func getGovernanceResults(dynamicClient dynamic.Interface, clusterInfo types.ManagedClusterInfo) []*v1alpha2.PolicyReportResult {
+func getGovernanceResults(dynamicClient dynamic.Interface, clusterInfo types.ManagedClusterInfo) []v1beta1.PolicyReportResult {
 	glog.V(1).Infof(
 		"Getting policy violations for cluster %s (%s)",
 		clusterInfo.Namespace,
@@ -188,10 +188,10 @@ func getGovernanceResults(dynamicClient dynamic.Interface, clusterInfo types.Man
 			clusterInfo.Namespace,
 			clusterInfo.ClusterID,
 		)
-		return []*v1alpha2.PolicyReportResult{}
+		return []v1beta1.PolicyReportResult{}
 	}
 
-	var clusterViolations []*v1alpha2.PolicyReportResult
+	var clusterViolations []v1beta1.PolicyReportResult
 
 	// Iterate over policies in the cluster
 	for _, plc := range policyList.Items {
@@ -267,7 +267,7 @@ func getGovernanceResults(dynamicClient dynamic.Interface, clusterInfo types.Man
 			}
 
 			// Append violation to policy report results
-			clusterViolations = append(clusterViolations, &v1alpha2.PolicyReportResult{
+			clusterViolations = append(clusterViolations, v1beta1.PolicyReportResult{
 				Policy:      plcName,
 				Description: message,
 				Scored:      false,
@@ -366,7 +366,7 @@ func getSevFromTemplate(plc unstructured.Unstructured, name string, statusIndex 
 }
 
 func createPolicyReport(
-	clusterViolations []*v1alpha2.PolicyReportResult,
+	clusterViolations []v1beta1.PolicyReportResult,
 	clusterInfo types.ManagedClusterInfo, dynamicClient dynamic.Interface) {
 	glog.V(1).Infof(
 		"Starting createPolicyReport for cluster %s (%s)",
@@ -374,10 +374,10 @@ func createPolicyReport(
 		clusterInfo.ClusterID,
 	)
 	// PolicyReport doesnt exist for cluster - creating
-	policyreport := &v1alpha2.PolicyReport{
+	policyreport := &v1beta1.PolicyReport{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "PolicyReport",
-			APIVersion: "wgpolicyk8s.io/v1alpha2",
+			APIVersion: "wgpolicyk8s.io/v1beta1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      clusterInfo.Namespace + prSuffix,
@@ -389,7 +389,7 @@ func createPolicyReport(
 			Name:      clusterInfo.Namespace,
 			Namespace: clusterInfo.Namespace,
 		},
-		Summary: v1alpha2.PolicyReportSummary{
+		Summary: v1beta1.PolicyReportSummary{
 			Pass:  0,
 			Fail:  len(clusterViolations),
 			Warn:  0,
@@ -426,8 +426,8 @@ func createPolicyReport(
 }
 
 func updatePolicyReportViolations(
-	currentPolicyReport v1alpha2.PolicyReport,
-	clusterViolations []*v1alpha2.PolicyReportResult,
+	currentPolicyReport v1beta1.PolicyReport,
+	clusterViolations []v1beta1.PolicyReportResult,
 	clusterInfo types.ManagedClusterInfo, dynamicClient dynamic.Interface) {
 	glog.V(2).Infof(
 		"Starting updatePolicyReportViolations for cluster %s (%s)",
