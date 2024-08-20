@@ -44,10 +44,9 @@ func GetClusterClaimInfo(managedCluster *clusterv1.ManagedCluster) (string, int6
 	var clusterVendor string
 	var clusterID string
 
+	clusterVendor = managedCluster.Labels["vendor"]
+
 	for _, claimInfo := range managedCluster.Status.ClusterClaims {
-		if claimInfo.Name == "product.open-cluster-management.io" {
-			clusterVendor = claimInfo.Value
-		}
 		if claimInfo.Name == "version.openshift.io" {
 			parsed, _ := strconv.ParseInt(claimInfo.Value[0:1], 10, 64)
 			version = parsed
@@ -215,7 +214,7 @@ func (m *Monitor) addCluster(managedCluster *clusterv1.ManagedCluster) {
 	})
 	glog.V(2).Infof("Currently mangaging %d clusters.", len(m.ManagedClusterInfo))
 	// We only get Insights for OpenShift clusters versioned 4.x or greater.
-	if clusterVendor == "OpenShift" && version >= 4 {
+	if (strings.ToLower(clusterVendor) == "openshift" || strings.ToLower(clusterVendor) == "microshift") && version >= 4 {
 		glog.Infof("Adding %s to Insights cluster list", managedCluster.GetName())
 		m.ClusterNeedsCCX[clusterID] = true
 	} else {
@@ -263,7 +262,7 @@ func (m *Monitor) updateCluster(managedCluster *clusterv1.ManagedCluster) {
 			ClusterID: clusterID,
 			Namespace: clusterToUpdate,
 		})
-		if clusterVendor == "OpenShift" && version >= 4 {
+		if (strings.ToLower(clusterVendor) == "openshift" || strings.ToLower(clusterVendor) == "microshift") && version >= 4 {
 			glog.Infof("Adding %s to Insights cluster list", managedCluster.GetName())
 			m.ClusterNeedsCCX[clusterID] = true
 		} else {
