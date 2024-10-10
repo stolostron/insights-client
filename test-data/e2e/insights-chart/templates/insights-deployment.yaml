@@ -88,7 +88,7 @@ spec:
         - name: CCX_TOKEN
           value: "{{ INSIGHTS_CLIENT_CCX_TOKEN }}"  
         - name: CCX_SERVER
-          value: "https://console.redhat.com/api/insights-results-aggregator/v1"
+          value: "https://console.redhat.com/api/insights-results-aggregator/v2"
         - name: POD_NAMESPACE
           valueFrom:
             fieldRef:
