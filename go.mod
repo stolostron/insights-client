@@ -58,7 +58,3 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 
 )
-
-replace golang.org/x/crypto => golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d
-
-replace golang.org/x/net => golang.org/x/net v0.26.0 // CVE-2023-39325
