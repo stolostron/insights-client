@@ -1,6 +1,8 @@
 module github.com/stolostron/insights-client
 
-go 1.20
+go 1.23.0
+
+toolchain go1.23.6
 
 require (
 	github.com/go-logr/logr v1.2.4 // indirect
@@ -13,9 +15,9 @@ require (
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/net v0.26.0 // indirect
 	golang.org/x/oauth2 v0.8.0 // indirect
-	golang.org/x/sys v0.21.0 // indirect
-	golang.org/x/term v0.21.0 // indirect
-	golang.org/x/text v0.16.0 // indirect
+	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/term v0.29.0 // indirect
+	golang.org/x/text v0.22.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	k8s.io/api v0.28.2
 	k8s.io/apimachinery v0.28.2
@@ -59,6 +61,6 @@ require (
 
 )
 
-replace golang.org/x/crypto => golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d
+replace golang.org/x/crypto => golang.org/x/crypto v0.35.0
 
 replace golang.org/x/net => golang.org/x/net v0.26.0 // CVE-2023-39325
