@@ -10,7 +10,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kennygrant/sanitize v1.2.4
-	github.com/stretchr/testify v1.8.2
+	github.com/stretchr/testify v1.10.0
 	golang.org/x/net v0.33.0 // indirect
 	golang.org/x/oauth2 v0.8.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
