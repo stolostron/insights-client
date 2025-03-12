@@ -64,7 +64,7 @@ setup_kubectl_and_oc_command() {
 	fi
 	# kubectl and oc are now installed in current dir 
 	echo -n "kubectl version" && kubectl version
- 	# echo -n "oc version" && oc version 
+ 	echo -n "oc version" && oc version 
 }
  
 create_kind_hub() { 
@@ -75,7 +75,7 @@ create_kind_hub() {
     	# uname returns your operating system name
     	# uname -- Print operating system name
     	# -L location, lowercase -o specify output name, uppercase -O. Write output to a local file named like the remote file we get  
-    	curl -Lo ./kind "https://kind.sigs.k8s.io/dl/v0.7.0/kind-$(uname)-amd64"
+    	curl -Lo ./kind "https://kind.sigs.k8s.io/dl/v0.27.0/kind-$(uname)-amd64"
     	chmod +x ./kind
     	sudo cp ./kind /usr/local/bin/kind
     fi
@@ -128,9 +128,9 @@ initial_setup() {
 
     echo -n "Installing Insights client deployment :" && kubectl apply -f ./test-data/e2e/insights-chart/templates
 	cat ./test-data/e2e/insights-chart/templates/insights-deployment.yaml
+   
+    echo -n "Waiting 100s for initial setup deployment."
     sleep 100s
-	
-
 }
 
 test_content_and_local_cluster_report(){
