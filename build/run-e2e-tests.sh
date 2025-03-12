@@ -36,18 +36,18 @@ setup_kubectl_and_oc_command() {
 	# if and when we are feeling ambitious... also download the installer and install ocp, and run our component integration test here	
 	# uname -a and grep mac or something...
     # Darwin MacBook-Pro 19.5.0 Darwin Kernel Version 19.5.0: Tue May 26 20:41:44 PDT 2020; root:xnu-6153.121.2~2/RELEASE_X86_64 x86_64
-	echo "Install kubectl and oc from openshift mirror (https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.4.14/openshift-client-mac-4.4.14.tar.gz)" 
+	echo "Install kubectl and oc from openshift mirror (https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.18.4/openshift-client-mac-4.18.4.tar.gz)" 
 	mv README.md README.md.tmp 
     if [[ "$(uname)" == "Darwin" ]]; then # then we are on a Mac 
 	        WORKDIR=`pwd`
-		curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.4.14/openshift-client-mac-4.4.14.tar.gz 
-		tar xzvf openshift-client-mac-4.4.14.tar.gz  # xzf to quiet logs
-		rm openshift-client-mac-4.4.14.tar.gz
+		curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.18.4/openshift-client-mac-4.18.4.tar.gz 
+		tar xzvf openshift-client-mac-4.18.4.tar.gz  # xzf to quiet logs
+		rm openshift-client-mac-4.18.4.tar.gz
     elif [[ "$(uname)" == "Linux" ]]; then # we are in prow, building in rhel 
 	        WORKDIR=/tmp/insights-client
-		curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.4.14/openshift-client-linux-4.4.14.tar.gz
-		tar xzvf openshift-client-linux-4.4.14.tar.gz  # xzf to quiet logs
-		rm openshift-client-linux-4.4.14.tar.gz
+		curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.18.4/openshift-client-linux-4.18.4.tar.gz
+		tar xzvf openshift-client-linux-4.18.4.tar.gz  # xzf to quiet logs
+		rm openshift-client-linux-4.18.4.tar.gz
     fi
 	# this package has a binary, so:
 
