@@ -33,6 +33,8 @@ func main() {
 		glog.Info("Built from git commit: ", commit)
 	}
 
+	config.SetupConfig()
+
 	dynamicClient := config.GetDynamicClient()
 	fetchClusterIDs := make(chan types.ManagedClusterInfo)
 	fetchPolicyReports := make(chan types.ProcessorData)
@@ -40,7 +42,7 @@ func main() {
 	monitor := monitor.NewClusterMonitor()
 	go monitor.WatchClusters()
 
-	// Set up Retiever and cache the Insights content data
+	// Set up Retriever and cache the Insights content data
 	ret := retriever.NewRetriever(config.Cfg.CCXServer+"/clusters/reports",
 		config.Cfg.CCXServer+"/content", nil, config.Cfg.CCXToken)
 	//Wait for hub cluster id to make GET API call

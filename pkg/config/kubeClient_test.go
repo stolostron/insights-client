@@ -13,6 +13,8 @@ import (
 
 // should build config from flags if kube config is not empty
 func Test_GetConfig(t *testing.T) {
+	// Establish the config
+	SetupConfig()
 
 	clientConfig := GetConfig()
 	var fromFlags *rest.Config

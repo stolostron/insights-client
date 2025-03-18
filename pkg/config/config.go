@@ -23,8 +23,8 @@ const (
 // Config - Define a config type to hold our config properties.
 type Config struct {
 	ServicePort     string `env:"SERVICE_PORT"`
-	HTTPTimeout     int    `env:"HTTP_TIMEOUT"`     // timeout when the http server should drop connections
 	CCXServer       string `env:"CCX_SERVER"`
+	HTTPTimeout     int    `env:"HTTP_TIMEOUT"`     // timeout when the http server should drop connections
 	KubeConfig      string `env:"KUBECONFIG"`       // Local kubeconfig path
 	CCXToken        string `env:"CCX_TOKEN"`        // Token to access CCX server , when pull-secret cannot be used
 	PollInterval    int    `env:"POLL_INTERVAL"`    // Polling interval to reports from cloud.redhat.com
@@ -38,7 +38,7 @@ var Cfg = Config{}
 
 var message = "Using %s from environment: %s"
 
-func init() {
+func SetupConfig() {
 	// If environment variables are set, use those values constants
 	// Simply put, the order of preference is env -> default constants (from left to right)
 	setDefault(&Cfg.ServicePort, "SERVICE_PORT", DEFAULT_SERVICE_PORT)
@@ -51,11 +51,10 @@ func init() {
 	setDefaultInt(&Cfg.RequestInterval, "REQUEST_INTERVAL", DEFAULT_REQUEST_INTERVAL)
 	defaultKubePath := filepath.Join(os.Getenv("HOME"), ".kube", "config")
 	if _, err := os.Stat(defaultKubePath); os.IsNotExist(err) {
-		// set default to empty string if path does not reslove
+		// set default to empty string if path does not resolve
 		defaultKubePath = ""
 	}
 	setDefault(&Cfg.KubeConfig, "KUBECONFIG", defaultKubePath)
-
 }
 
 func setDefault(field *string, env, defaultVal string) {
