@@ -1,7 +1,7 @@
 # Copyright (c) 2021 Red Hat, Inc.
 # Copyright Contributors to the Open Cluster Management project
 
-FROM registry.ci.openshift.org/stolostron/builder:go1.22-linux AS builder
+FROM registry.ci.openshift.org/stolostron/builder:go1.23-linux AS builder
 
 WORKDIR /go/src/github.com/stolostron/insights-client
 COPY . .
@@ -40,8 +40,8 @@ LABEL org.label-schema.vendor="Red Hat" \
       io.k8s.description="$IMAGE_DESCRIPTION" \
       io.openshift.tags="$IMAGE_OPENSHIFT_TAGS"
 
-RUN microdnf update &&\
-    microdnf install ca-certificates vi --nodocs &&\
+RUN microdnf update -y &&\
+    microdnf install -y ca-certificates vi --nodocs &&\
     microdnf clean all
 
 COPY --from=builder /go/src/github.com/stolostron/insights-client/main /bin/main
