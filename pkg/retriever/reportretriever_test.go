@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stolostron/insights-client/pkg/config"
 	"github.com/stolostron/insights-client/pkg/monitor"
 	"github.com/stolostron/insights-client/pkg/types"
 	mocks "github.com/stolostron/insights-client/pkg/utils"
@@ -63,6 +64,9 @@ func TestCallInsights(t *testing.T) {
 }
 
 func Test_FetchClusters(t *testing.T) {
+	// Establish the config
+	config.SetupConfig()
+
 	namespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "local-cluster",
