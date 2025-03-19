@@ -42,10 +42,6 @@ setup_kubectl_and_oc_command() {
 		tar xzvf openshift-client-mac-4.18.4.tar.gz  # xzf to quiet logs
 		rm openshift-client-mac-4.18.4.tar.gz
     elif [[ "$(uname)" == "Linux" ]]; then # we are in prow, building in rhel 
-		cat /etc/redhat-release
-		cat /etc/os-release
-		uname -r
-		uname -m
 	    WORKDIR=/tmp/insights-client
 		curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.18.4/openshift-client-linux-amd64-rhel8.tar.gz
 		tar xzvf openshift-client-linux-amd64-rhel8.tar.gz  # xzf to quiet logs
