@@ -24,9 +24,7 @@ deploy() {
 	initial_setup
 	test_content_and_local_cluster_report
 	swap_back_to_templates
-
 }
-
 
 
 setup_kubectl_and_oc_command() {
@@ -39,15 +37,15 @@ setup_kubectl_and_oc_command() {
 	echo "Install kubectl and oc from openshift mirror (https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.18.4/openshift-client-mac-4.18.4.tar.gz)" 
 	mv README.md README.md.tmp 
     if [[ "$(uname)" == "Darwin" ]]; then # then we are on a Mac 
-	        WORKDIR=`pwd`
+	    WORKDIR=`pwd`
 		curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.18.4/openshift-client-mac-4.18.4.tar.gz 
 		tar xzvf openshift-client-mac-4.18.4.tar.gz  # xzf to quiet logs
 		rm openshift-client-mac-4.18.4.tar.gz
     elif [[ "$(uname)" == "Linux" ]]; then # we are in prow, building in rhel 
-	        WORKDIR=/tmp/insights-client
-		curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.18.4/openshift-client-linux-4.18.4.tar.gz
-		tar xzvf openshift-client-linux-4.18.4.tar.gz  # xzf to quiet logs
-		rm openshift-client-linux-4.18.4.tar.gz
+	    WORKDIR=/tmp/insights-client
+		curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.18.4/openshift-client-linux-amd64-rhel9.tar.gz
+		tar xzvf openshift-client-linux-amd64-rhel9.tar.gz  # xzf to quiet logs
+		rm openshift-client-linux-amd64-rhel9.tar.gz
     fi
 	# this package has a binary, so:
 
