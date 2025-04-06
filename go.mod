@@ -21,7 +21,7 @@ require (
 	k8s.io/apimachinery v0.28.2
 	k8s.io/client-go v0.28.2
 	k8s.io/klog/v2 v2.100.1 // indirect
-	k8s.io/utils v0.0.0-20230406110748-d93618cff8a2 // indirect
+	k8s.io/utils v0.0.0-20250321185631-1f6e0b77f77e // indirect
 	open-cluster-management.io/api v0.8.0
 	sigs.k8s.io/controller-runtime v0.12.3 // indirect
 	sigs.k8s.io/wg-policy-prototypes v0.0.0-20220621183026-3a45189307a3
