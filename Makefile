@@ -3,8 +3,6 @@
 
 BINDIR ?= output
 
-include build/Configfile
-
 USE_VENDORIZED_BUILD_HARNESS ?=
 
 ifndef USE_VENDORIZED_BUILD_HARNESS
@@ -55,6 +53,9 @@ clean::
 # Build the docker image
 docker-build: 
 	docker build -f Dockerfile . -t $(shell cat COMPONENT_NAME)
+
+podman-build:
+	podman build -f Dockerfile . -t $(shell cat COMPONENT_NAME)
 
 e2e-tests:
 	@echo "Run e2e-tests"
