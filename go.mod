@@ -12,7 +12,7 @@ require (
 	github.com/kennygrant/sanitize v1.2.4
 	github.com/stretchr/testify v1.8.2
 	golang.org/x/net v0.33.0 // indirect
-	golang.org/x/oauth2 v0.28.0 // indirect
+	golang.org/x/oauth2 v0.29.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/term v0.27.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
