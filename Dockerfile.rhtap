@@ -20,9 +20,10 @@ USER ${USER_UID}
 ENTRYPOINT ["/bin/main"]
 
 LABEL com.redhat.component="acm-insights-client-container" \
+      cpe="cpe:/a:redhat:acm:2.14::el9" \
       description="Insights client service" \
       maintainer="acm-contact@redhat.com" \
-      name="insights-client" \
+      name="rhacm2/insights-client-rhel9" \
       org.label-schema.license="Red Hat Advanced Cluster Management for Kubernetes EULA" \
       org.label-schema.schema-version="1.0" \
       summary="Insights client service" \
