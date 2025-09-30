@@ -2,9 +2,7 @@ package retriever
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -24,21 +22,23 @@ import (
 )
 
 func TestCallInsights(t *testing.T) {
-	var postBody types.PostBody
-
-	postFunc := func(w http.ResponseWriter, r *http.Request) {
-		body, _ := io.ReadAll(r.Body)
-		err := json.Unmarshal(body, &postBody)
-		if err == nil {
-			w.Header().Set("Content-Type", "application/json")
-
-			response := mocks.GetMockData(string(postBody.Clusters[0]))
-			fmt.Fprintln(w, string(response))
-
+	getFunc := func(w http.ResponseWriter, r *http.Request) {
+		// Verify the request method is GET
+		if r.Method != "GET" {
+			t.Errorf("Expected GET request, got %s", r.Method)
 		}
-
+		
+		// Verify the URL path contains the cluster ID
+		expectedPath := "/cluster/34c3ecc5-624a-49a5-bab8-4fdc5e51a266/reports"
+		if r.URL.Path != expectedPath {
+			t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
+		}
+		
+		w.Header().Set("Content-Type", "application/json")
+		response := mocks.GetMockData("34c3ecc5-624a-49a5-bab8-4fdc5e51a266")
+		fmt.Fprintln(w, string(response))
 	}
-	ts := httptest.NewServer(http.HandlerFunc(postFunc))
+	ts := httptest.NewServer(http.HandlerFunc(getFunc))
 	ts.EnableHTTP2 = true
 	defer ts.Close()
 

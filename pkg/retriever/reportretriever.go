@@ -229,7 +229,7 @@ func (r *Retriever) CreateInsightsRequest(
 		cluster.ClusterID,
 		r.ReportUrl,
 	)
-	req, err := http.NewRequest("GET", endpoint+"/cluster/"+cluster.ClusterID+"/reports")
+	req, err := http.NewRequest("GET", endpoint+"/cluster/"+cluster.ClusterID+"/reports", nil)
 	if err != nil {
 		glog.Warningf("Error creating HttpRequest for cluster %s (%s), %v", cluster.Namespace, cluster.ClusterID, err)
 		return nil, err
