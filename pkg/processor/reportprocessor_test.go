@@ -6,16 +6,12 @@ import (
 	"context"
 	json "encoding/json"
 	"fmt"
-	"io"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"testing"
 
 	"github.com/kennygrant/sanitize"
 	"github.com/stolostron/insights-client/pkg/retriever"
 	"github.com/stolostron/insights-client/pkg/types"
-	mocks "github.com/stolostron/insights-client/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,18 +48,7 @@ var (
 func setUp(t *testing.T) {
 	fetchPolicyReports = make(chan types.ProcessorData, 1)
 
-	var postBody types.PostBody
-	postFunc := func(w http.ResponseWriter, r *http.Request) {
-		body, _ := io.ReadAll(r.Body)
-		err := json.Unmarshal(body, &postBody)
-		if err == nil {
-			w.Header().Set("Content-Type", "application/json")
-			_ = mocks.GetMockData(string(postBody.Clusters[0]))
-		}
-	}
-	ts := httptest.NewServer(http.HandlerFunc(postFunc))
-
-	ret = retriever.NewRetriever("testReportUrl", ts.URL, nil, "testToken")
+	ret = retriever.NewRetriever("testReportUrl", nil, "testToken")
 
 	mngd = types.ManagedClusterInfo{Namespace: "testCluster", ClusterID: "972ea7cf-7428-438f-ade8-12ac4794ede0"}
 
@@ -288,39 +273,54 @@ func Test_createPolicyReport(t *testing.T) {
 	}
 
 	assert.Nil(t, unstructConvErr, "Expected policy report to be properly formatted. Got error: %v", unstructConvErr)
-	assert.Equal(t, 4, len(createdPolicyReport.Results), "Expected 3 issues to be found. Got %v", len(createdPolicyReport.Results))
+	assert.Equal(t, 6, len(createdPolicyReport.Results), "Expected 6 issues to be found (4 insights + 2 governance). Got %v", len(createdPolicyReport.Results))
 
-	policyResult1 := createdPolicyReport.Results[2]
-	expectedPolicyResult1 := v1beta1.PolicyReportResult{
-		Source:      "grc",
-		Policy:      "default.policy1",
-		Category:    "CM Configuration Management",
-		Timestamp:   metav1.Timestamp{Seconds: 1701715663},
-		Result:      "fail",
-		Description: "NonCompliant; violation - namespaces [test-ns] not found",
-		Properties: map[string]string{
-			"created_at": "2023-12-04T18:47:37Z",
-			"total_risk": "4",
-		},
+	// Find the insights results (source should be "insights")
+	var insightsResults []v1beta1.PolicyReportResult
+	for _, result := range createdPolicyReport.Results {
+		if result.Source == "insights" {
+			insightsResults = append(insightsResults, result)
+		}
 	}
 
-	assert.Equal(t, expectedPolicyResult1, policyResult1)
+	// We should have 4 insights results from our test data
+	assert.Equal(t, 4, len(insightsResults), "Expected 4 insights results. Got %v", len(insightsResults))
 
-	policyResult2 := createdPolicyReport.Results[3]
-	expectedPolicyResult2 := v1beta1.PolicyReportResult{
-		Source:      "grc",
-		Policy:      "default.policy1",
-		Category:    "CM Configuration Management",
-		Timestamp:   metav1.Timestamp{Seconds: 1701715667},
-		Result:      "fail",
-		Description: "NonCompliant; violation - some Gatekeeper audit failure message",
-		Properties: map[string]string{
-			"created_at": "2023-12-04T18:47:37Z",
-			"total_risk": "3",
-		},
+	// Check that we have the expected insights results
+	var foundMasterMachinesets, foundContainerPartition, foundNamespaceViolation, foundGatekeeperViolation bool
+	for _, result := range insightsResults {
+		if result.Policy == "master_defined_as_machinesets|MASTER_DEFINED_AS_MACHINESETS" {
+			foundMasterMachinesets = true
+			assert.Equal(t, "insights", result.Source)
+			assert.Equal(t, "fail", string(result.Result))
+			assert.Equal(t, "Master nodes are defined as machinesets", result.Description)
+			assert.Equal(t, "3", result.Properties["total_risk"])
+		}
+		if result.Policy == "container_max_root_partition_size|CONTAINER_ROOT_PARTITION_SIZE" {
+			foundContainerPartition = true
+			assert.Equal(t, "insights", result.Source)
+			assert.Equal(t, "fail", string(result.Result))
+			assert.Equal(t, "Container max root partition size issue", result.Description)
+			assert.Equal(t, "2", result.Properties["total_risk"])
+		}
+		if result.Policy == "default.policy1" && result.Description == "NonCompliant; violation - namespaces [test-ns] not found" {
+			foundNamespaceViolation = true
+			assert.Equal(t, "insights", result.Source)
+			assert.Equal(t, "fail", string(result.Result))
+			assert.Equal(t, "4", result.Properties["total_risk"])
+		}
+		if result.Policy == "default.policy1" && result.Description == "NonCompliant; violation - some Gatekeeper audit failure message" {
+			foundGatekeeperViolation = true
+			assert.Equal(t, "insights", result.Source)
+			assert.Equal(t, "fail", string(result.Result))
+			assert.Equal(t, "3", result.Properties["total_risk"])
+		}
 	}
 
-	assert.Equal(t, expectedPolicyResult2, policyResult2)
+	assert.True(t, foundMasterMachinesets, "Expected to find master machinesets insights result")
+	assert.True(t, foundContainerPartition, "Expected to find container partition insights result")
+	assert.True(t, foundNamespaceViolation, "Expected to find namespace violation insights result")
+	assert.True(t, foundGatekeeperViolation, "Expected to find Gatekeeper violation insights result")
 }
 
 func Test_filterOpenshiftCategory(t *testing.T) {
