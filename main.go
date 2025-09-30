@@ -42,9 +42,8 @@ func main() {
 	monitor := monitor.NewClusterMonitor()
 	go monitor.WatchClusters()
 
-	// Set up Retriever and cache the Insights content data
-	ret := retriever.NewRetriever(config.Cfg.CCXServer,
-		config.Cfg.CCXServer+"/content", nil, config.Cfg.CCXToken)
+	// Set up Retriever and cache the Insights data
+	ret := retriever.NewRetriever(config.Cfg.CCXServer, nil, config.Cfg.CCXToken)
 	//Wait for hub cluster id to make GET API call
 	hubID := "-1"
 	for hubID == "-1" {
@@ -55,18 +54,6 @@ func main() {
 		}
 		glog.Info("Waiting for local-cluster Id.")
 		time.Sleep(2 * time.Second)
-	}
-
-	if !ret.DisconnectedEnv {
-		// Wait until we can create the contents map , which will be used to lookup report details
-		contents := ret.InitializeContents(hubID, dynamicClient)
-		retryCount := 1
-		for contents < 0 {
-			glog.Info("Contents Map not ready. Retrying.")
-			time.Sleep(time.Duration(min(300, retryCount*2)) * time.Second)
-			contents = ret.InitializeContents(hubID, dynamicClient)
-			retryCount++
-		}
 	}
 
 	// Fetch the reports for each cluster & create the PolicyReport resources for each violation.

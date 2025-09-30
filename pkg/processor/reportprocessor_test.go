@@ -67,11 +67,6 @@ func setUp(t *testing.T) {
 
 	mngd = types.ManagedClusterInfo{Namespace: "testCluster", ClusterID: "972ea7cf-7428-438f-ade8-12ac4794ede0"}
 
-	fmt.Println("Load contentsMap")
-	var content types.ContentsResponse
-	UnmarshalFile("content.json", &content, t)
-	ret.CreateContents(content)
-
 	scheme := runtime.NewScheme()
 	scheme.AddKnownTypes(corev1.SchemeGroupVersion, &corev1.Namespace{})
 	scheme.AddKnownTypes(v1beta1.SchemeGroupVersion, &v1beta1.PolicyReport{})

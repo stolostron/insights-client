@@ -11,7 +11,6 @@ import (
 	"github.com/stolostron/insights-client/pkg/config"
 	"github.com/stolostron/insights-client/pkg/monitor"
 	"github.com/stolostron/insights-client/pkg/types"
-	mocks "github.com/stolostron/insights-client/pkg/utils"
 	"github.com/stretchr/testify/assert"
 
 	corev1 "k8s.io/api/core/v1"
@@ -35,14 +34,34 @@ func TestCallInsights(t *testing.T) {
 		}
 		
 		w.Header().Set("Content-Type", "application/json")
-		response := mocks.GetMockData("34c3ecc5-624a-49a5-bab8-4fdc5e51a266")
-		fmt.Fprintln(w, string(response))
+		// Create a mock response that matches the expected structure
+		mockResponse := `{
+			"status": "ok",
+			"report": {
+				"data": [
+					{
+						"rule_id": "test_rule_1",
+						"key": "test_key_1",
+						"component": "test_component_1",
+						"details": "test details 1"
+					}
+				],
+				"meta": {
+					"cluster_name": "test-cluster",
+					"count": 1,
+					"gathered_at": "2021-10-20T15:00:00Z",
+					"last_checked_at": "2021-10-20T15:00:00Z",
+					"managed": false
+				}
+			}
+		}`
+		fmt.Fprintln(w, mockResponse)
 	}
 	ts := httptest.NewServer(http.HandlerFunc(getFunc))
 	ts.EnableHTTP2 = true
 	defer ts.Close()
 
-	ret := NewRetriever(ts.URL, "testContentUrl", nil, "testToken")
+	ret := NewRetriever(ts.URL, nil, "testToken")
 	req, _ := ret.CreateInsightsRequest(
 		context.TODO(),
 		ts.URL,
@@ -57,8 +76,8 @@ func TestCallInsights(t *testing.T) {
 	}
 
 	response, _ := ret.CallInsights(req, types.ManagedClusterInfo{Namespace: "testCluster", ClusterID: "34c3ecc5-624a-49a5-bab8-4fdc5e51a266"})
-	if len(response.Reports) != 1 {
-		t.Errorf("Unexpected Report length %d", len(response.Reports))
+	if len(response.Report.Data) != 1 {
+		t.Errorf("Unexpected Report length %d", len(response.Report.Data))
 	}
 
 }
@@ -67,7 +86,7 @@ func Test_FetchClusters(t *testing.T) {
 	// Establish the config
 	config.SetupConfig()
 
-	namespace = &corev1.Namespace{
+	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "local-cluster",
 		},
@@ -75,14 +94,14 @@ func Test_FetchClusters(t *testing.T) {
 	scheme := runtime.NewScheme()
 	scheme.AddKnownTypes(corev1.SchemeGroupVersion, &corev1.Namespace{})
 	scheme.AddKnownTypes(v1beta1.SchemeGroupVersion, &v1beta1.PolicyReport{})
-	fakeDynamicClient = dynamicfakeclient.NewSimpleDynamicClient(scheme, namespace)
+	fakeDynamicClient := dynamicfakeclient.NewSimpleDynamicClient(scheme, namespace)
 
 	monitor := monitor.NewClusterMonitor()
 	monitor.ManagedClusterInfo = []types.ManagedClusterInfo{{Namespace: "local-cluster", ClusterID: "323a00cd-428a-49fb-80ab-201d2a5d3050"}}
 
 	fetchClusterIDs := make(chan types.ManagedClusterInfo)
 
-	ret := NewRetriever("testServer", "testContentUrl", nil, "testToken")
+	ret := NewRetriever("testServer", nil, "testToken")
 
 	go ret.FetchClusters(monitor, fetchClusterIDs, false, "323a00cd-428a-49fb-80ab-201d2a5d3050", fakeDynamicClient)
 	testData := <-fetchClusterIDs
@@ -105,25 +124,30 @@ func TestRetrieveReport(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			// Create a properly formatted response that matches the expected structure
 			mockResponse := `{
-				"reports": {
-					"34c3ecc5-624a-49a5-bab8-4fdc5e51a266": {
-						"reports": [
-							{
-								"rule_id": "test_rule_1",
-								"key": "test_key_1",
-								"component": "test_component_1",
-								"details": "test details 1"
-							},
-							{
-								"rule_id": "test_rule_2", 
-								"key": "test_key_2",
-								"component": "test_component_2",
-								"details": "test details 2"
-							}
-						]
+				"status": "ok",
+				"report": {
+					"data": [
+						{
+							"rule_id": "test_rule_1",
+							"key": "test_key_1",
+							"component": "test_component_1",
+							"details": "test details 1"
+						},
+						{
+							"rule_id": "test_rule_2", 
+							"key": "test_key_2",
+							"component": "test_component_2",
+							"details": "test details 2"
+						}
+					],
+					"meta": {
+						"cluster_name": "test-cluster",
+						"count": 2,
+						"gathered_at": "2021-10-20T15:00:00Z",
+						"last_checked_at": "2021-10-20T15:00:00Z",
+						"managed": false
 					}
-				},
-				"errors": []
+				}
 			}`
 			fmt.Fprintln(w, mockResponse)
 		}
@@ -145,7 +169,7 @@ func TestRetrieveReport(t *testing.T) {
 			"34c3ecc5-624a-49a5-bab8-4fdc5e51a266": true,
 		}
 		
-		ret := NewRetriever(ts.URL, "testContentUrl", nil, "testToken")
+		ret := NewRetriever(ts.URL, nil, "testToken")
 		go ret.RetrieveReport("testHubID", input, output, clusterCCXMap, false)
 		
 		result := <-output
@@ -156,8 +180,8 @@ func TestRetrieveReport(t *testing.T) {
 			t.Errorf("Expected cluster ID %s, got %s", cluster.ClusterID, result.ClusterInfo.ClusterID)
 		}
 		// Should have reports from the mock data
-		if len(result.Reports.Reports) != 2 {
-			t.Errorf("Expected 2 reports to be retrieved, but got %d reports", len(result.Reports.Reports))
+		if len(result.Report.Data) != 2 {
+			t.Errorf("Expected 2 reports to be retrieved, but got %d reports", len(result.Report.Data))
 		}
 	})
 }
