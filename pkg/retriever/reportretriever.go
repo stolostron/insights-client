@@ -4,7 +4,6 @@
 package retriever
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -230,13 +229,7 @@ func (r *Retriever) CreateInsightsRequest(
 		cluster.ClusterID,
 		r.ReportUrl,
 	)
-	reqCluster := types.PostBody{
-		Clusters: []string{
-			cluster.ClusterID,
-		},
-	}
-	reqBody, _ := json.Marshal(reqCluster)
-	req, err := http.NewRequest("POST", endpoint+"/cluster/"+cluster.ClusterID+"/reports", bytes.NewBuffer(reqBody))
+	req, err := http.NewRequest("GET", endpoint+"/cluster/"+cluster.ClusterID+"/reports")
 	if err != nil {
 		glog.Warningf("Error creating HttpRequest for cluster %s (%s), %v", cluster.Namespace, cluster.ClusterID, err)
 		return nil, err
