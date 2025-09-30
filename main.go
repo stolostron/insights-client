@@ -94,11 +94,3 @@ func main() {
 	log.Fatal(srv.ListenAndServeTLS("./sslcert/tls.crt", "./sslcert/tls.key"),
 		" Use ./setup.sh to generate certificates for local development.")
 }
-
-// Returns the smaller of two ints
-func min(a, b int) int {
-	if a > b {
-		return b
-	}
-	return a
-}
