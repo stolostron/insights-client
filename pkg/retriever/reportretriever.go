@@ -227,7 +227,7 @@ func (r *Retriever) CreateInsightsRequest(
 		"Creating Request for cluster %s (%s) using Insights URL %s",
 		cluster.Namespace,
 		cluster.ClusterID,
-		r.ReportUrl,
+		endpoint+"/cluster/"+cluster.ClusterID+"/reports",
 	)
 	req, err := http.NewRequest("GET", endpoint+"/cluster/"+cluster.ClusterID+"/reports", nil)
 	if err != nil {

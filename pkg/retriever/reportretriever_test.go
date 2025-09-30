@@ -94,3 +94,70 @@ func Test_FetchClusters(t *testing.T) {
 		"Test Fetch ManagedCluster list",
 	)
 }
+
+func TestRetrieveReport(t *testing.T) {
+	t.Run("Successful report retrieval", func(t *testing.T) {
+		// Create a mock server
+		getFunc := func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != "GET" {
+				t.Errorf("Expected GET request, got %s", r.Method)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			// Create a properly formatted response that matches the expected structure
+			mockResponse := `{
+				"reports": {
+					"34c3ecc5-624a-49a5-bab8-4fdc5e51a266": {
+						"reports": [
+							{
+								"rule_id": "test_rule_1",
+								"key": "test_key_1",
+								"component": "test_component_1",
+								"details": "test details 1"
+							},
+							{
+								"rule_id": "test_rule_2", 
+								"key": "test_key_2",
+								"component": "test_component_2",
+								"details": "test details 2"
+							}
+						]
+					}
+				},
+				"errors": []
+			}`
+			fmt.Fprintln(w, mockResponse)
+		}
+		ts := httptest.NewServer(http.HandlerFunc(getFunc))
+		defer ts.Close()
+
+		input := make(chan types.ManagedClusterInfo, 1)
+		output := make(chan types.ProcessorData, 1)
+		
+		cluster := types.ManagedClusterInfo{
+			Namespace: "test-cluster",
+			ClusterID: "34c3ecc5-624a-49a5-bab8-4fdc5e51a266",
+		}
+		input <- cluster
+		close(input)
+		
+		// Cluster is in CCX map
+		clusterCCXMap := map[string]bool{
+			"34c3ecc5-624a-49a5-bab8-4fdc5e51a266": true,
+		}
+		
+		ret := NewRetriever(ts.URL, "testContentUrl", nil, "testToken")
+		go ret.RetrieveReport("testHubID", input, output, clusterCCXMap, false)
+		
+		result := <-output
+		if result.ClusterInfo.Namespace != cluster.Namespace {
+			t.Errorf("Expected cluster namespace %s, got %s", cluster.Namespace, result.ClusterInfo.Namespace)
+		}
+		if result.ClusterInfo.ClusterID != cluster.ClusterID {
+			t.Errorf("Expected cluster ID %s, got %s", cluster.ClusterID, result.ClusterInfo.ClusterID)
+		}
+		// Should have reports from the mock data
+		if len(result.Reports.Reports) != 2 {
+			t.Errorf("Expected 2 reports to be retrieved, but got %d reports", len(result.Reports.Reports))
+		}
+	})
+}
