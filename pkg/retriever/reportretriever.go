@@ -30,7 +30,7 @@ import (
 
 // Retriever struct
 type Retriever struct {
-	CCXUrl          string
+	ReportUrl          string
 	ContentURL      string
 	Client          *http.Client
 	Token           string // token to connect to CRC
@@ -45,7 +45,7 @@ type serializedAuth struct {
 }
 
 // NewRetriever ...
-func NewRetriever(ccxurl string, ContentURL string, client *http.Client,
+func NewRetriever(ReportUrl string, ContentURL string, client *http.Client,
 	token string) *Retriever {
 	if client == nil {
 		clientTransport := &http.Transport{
@@ -77,7 +77,7 @@ func NewRetriever(ccxurl string, ContentURL string, client *http.Client,
 	}
 	r := &Retriever{
 		Client:     client,
-		CCXUrl:     ccxurl,
+		ReportUrl:     ReportUrl,
 		ContentURL: ContentURL,
 	}
 	if token == "" {
@@ -184,7 +184,7 @@ func (r *Retriever) RetrieveReport(
 		}
 
 		glog.Infof("Retrieve CCX Report for cluster %s", cluster.Namespace)
-		req, err := r.CreateInsightsRequest(context.TODO(), r.CCXUrl, cluster, hubID)
+		req, err := r.CreateInsightsRequest(context.TODO(), r.ReportUrl, cluster, hubID)
 		if err != nil {
 			handleCCXRequestErr(err, "Error creating HttpRequest for cluster %s (%s), %v", output, cluster)
 			continue
@@ -228,7 +228,7 @@ func (r *Retriever) CreateInsightsRequest(
 		"Creating Request for cluster %s (%s) using Insights URL %s",
 		cluster.Namespace,
 		cluster.ClusterID,
-		r.CCXUrl,
+		r.ReportUrl,
 	)
 	reqCluster := types.PostBody{
 		Clusters: []string{
@@ -236,7 +236,7 @@ func (r *Retriever) CreateInsightsRequest(
 		},
 	}
 	reqBody, _ := json.Marshal(reqCluster)
-	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(reqBody))
+	req, err := http.NewRequest("POST", endpoint+"/cluster/"+cluster.ClusterID+"/reports", bytes.NewBuffer(reqBody))
 	if err != nil {
 		glog.Warningf("Error creating HttpRequest for cluster %s (%s), %v", cluster.Namespace, cluster.ClusterID, err)
 		return nil, err
