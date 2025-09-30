@@ -63,7 +63,7 @@ func setUp(t *testing.T) {
 	}
 	ts := httptest.NewServer(http.HandlerFunc(postFunc))
 
-	ret = retriever.NewRetriever("testCCXUrl", ts.URL, nil, "testToken")
+	ret = retriever.NewRetriever("testReportUrl", ts.URL, nil, "testToken")
 
 	mngd = types.ManagedClusterInfo{Namespace: "testCluster", ClusterID: "972ea7cf-7428-438f-ade8-12ac4794ede0"}
 

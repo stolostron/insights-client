@@ -43,7 +43,7 @@ func main() {
 	go monitor.WatchClusters()
 
 	// Set up Retriever and cache the Insights content data
-	ret := retriever.NewRetriever(config.Cfg.CCXServer+"/clusters/reports",
+	ret := retriever.NewRetriever(config.Cfg.CCXServer,
 		config.Cfg.CCXServer+"/content", nil, config.Cfg.CCXToken)
 	//Wait for hub cluster id to make GET API call
 	hubID := "-1"

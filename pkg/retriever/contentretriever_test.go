@@ -39,7 +39,7 @@ func TestCallContents(t *testing.T) {
 	ts.EnableHTTP2 = true
 	defer ts.Close()
 
-	ret := NewRetriever("testCCXUrl", ts.URL, nil, "testToken")
+	ret := NewRetriever("testReportUrl", ts.URL, nil, "testToken")
 	req, _ := ret.GetContentRequest(context.TODO(), "34c3ecc5-624a-49a5-bab8-4fdc5e51a266")
 	if req.Header.Get("User-Agent") != "acm-operator/v2.3.0 cluster/34c3ecc5-624a-49a5-bab8-4fdc5e51a266" {
 		t.Errorf("Header User-Agent not formed correct    : %s", req.Header.Get("User-Agent"))
