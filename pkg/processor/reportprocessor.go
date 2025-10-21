@@ -114,7 +114,7 @@ func (p *Processor) createUpdatePolicyReports(input chan types.ProcessorData, dy
 	}
 
 	clusterViolations := getPolicyReportResults(
-		data.Reports.Data,
+		data.Report.Data,
 		data.ClusterInfo,
 	)
 
