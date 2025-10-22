@@ -137,7 +137,7 @@ test_content_and_local_cluster_report(){
 	pod=$(oc get pods | grep insights-client | cut -d' ' -f1)
 	oc logs $pod
 	log=$(oc logs $pod) 
-	log_msg=$(echo $log| grep "Creating Content Request for cluster 69365d80-c4ef-4999-8417-f14c8e2892c2")
+	log_msg=$(echo $log| grep "Creating Request for cluster")
 	if [[ "$log_msg" == *"local-cluster"* ]]; then
 	    echo "Pod log has policy report"
 	else

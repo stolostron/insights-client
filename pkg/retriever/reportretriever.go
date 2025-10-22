@@ -4,7 +4,6 @@
 package retriever
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -16,6 +15,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/golang/glog"
@@ -28,10 +28,11 @@ import (
 	"k8s.io/client-go/dynamic"
 )
 
+var lock = sync.RWMutex{}
+
 // Retriever struct
 type Retriever struct {
-	CCXUrl          string
-	ContentURL      string
+	ReportUrl       string
 	Client          *http.Client
 	Token           string // token to connect to CRC
 	DisconnectedEnv bool
@@ -45,7 +46,7 @@ type serializedAuth struct {
 }
 
 // NewRetriever ...
-func NewRetriever(ccxurl string, ContentURL string, client *http.Client,
+func NewRetriever(ReportUrl string, client *http.Client,
 	token string) *Retriever {
 	if client == nil {
 		clientTransport := &http.Transport{
@@ -77,8 +78,7 @@ func NewRetriever(ccxurl string, ContentURL string, client *http.Client,
 	}
 	r := &Retriever{
 		Client:     client,
-		CCXUrl:     ccxurl,
-		ContentURL: ContentURL,
+		ReportUrl:     ReportUrl,
 	}
 	if token == "" {
 		r.DisconnectedEnv = r.setUpRetriever()
@@ -178,13 +178,13 @@ func (r *Retriever) RetrieveReport(
 			glog.Infof("Retrieve Report for cluster %s", cluster.Namespace)
 			output <- types.ProcessorData{
 				ClusterInfo: cluster,
-				Reports:     types.Reports{},
+				Report:     types.ReportBody{},
 			}
 			continue
 		}
 
 		glog.Infof("Retrieve CCX Report for cluster %s", cluster.Namespace)
-		req, err := r.CreateInsightsRequest(context.TODO(), r.CCXUrl, cluster, hubID)
+		req, err := r.CreateInsightsRequest(context.TODO(), r.ReportUrl, cluster, hubID)
 		if err != nil {
 			handleCCXRequestErr(err, "Error creating HttpRequest for cluster %s (%s), %v", output, cluster)
 			continue
@@ -213,7 +213,7 @@ func handleCCXRequestErr(
 	glog.Warningf(message, cluster.Namespace, cluster.ClusterID, err)
 	output <- types.ProcessorData{
 		ClusterInfo: cluster,
-		Reports:     types.Reports{},
+		Report:     types.ReportBody{},
 	}
 }
 
@@ -228,15 +228,9 @@ func (r *Retriever) CreateInsightsRequest(
 		"Creating Request for cluster %s (%s) using Insights URL %s",
 		cluster.Namespace,
 		cluster.ClusterID,
-		r.CCXUrl,
+		endpoint+"/cluster/"+cluster.ClusterID+"/reports",
 	)
-	reqCluster := types.PostBody{
-		Clusters: []string{
-			cluster.ClusterID,
-		},
-	}
-	reqBody, _ := json.Marshal(reqCluster)
-	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(reqBody))
+	req, err := http.NewRequest("GET", endpoint+"/cluster/"+cluster.ClusterID+"/reports", nil)
 	if err != nil {
 		glog.Warningf("Error creating HttpRequest for cluster %s (%s), %v", cluster.Namespace, cluster.ClusterID, err)
 		return nil, err
@@ -296,43 +290,29 @@ func (r *Retriever) GetPolicyInfo(
 	cluster types.ManagedClusterInfo,
 ) (types.ProcessorData, error) {
 	glog.V(2).Infof("Starting GetPolicyInfo for cluster %s (%s)", cluster.Namespace, cluster.ClusterID)
-	reports := types.Reports{}
-	for _, clusterErrored := range responseBody.Errors {
-		glog.Warningf("No Reports returned from CCX Insights for cluster: %s", clusterErrored)
-		glog.V(2).Infof("Errors returned from CCX Insights for cluster : %v", responseBody)
+	report := types.ReportBody{}
+	// convert report data into []byte
+	reportBytes, _ := json.Marshal(responseBody.Report)
+	// unmarshal response data into the Report struct
+	unmarshalError := json.Unmarshal(reportBytes, &report)
+	if unmarshalError != nil {
+		glog.Infof(
+			"Error unmarshalling Policy %v for cluster %s (%s)",
+			unmarshalError,
+			cluster.Namespace,
+			cluster.ClusterID,
+		)
+		return types.ProcessorData{}, unmarshalError
 	}
 
-	// loop through the clusters in the response and pull out the report violations
-	for reportClusterID := range responseBody.Reports {
-		if reportClusterID == cluster.ClusterID {
-			// convert report data into []byte
-			reportBytes, _ := json.Marshal(responseBody.Reports[reportClusterID])
-			// unmarshal response data into the Report struct
-			unmarshalError := json.Unmarshal(reportBytes, &reports)
-			if unmarshalError != nil {
-				glog.Infof(
-					"Error unmarshalling Policy %v for cluster %s (%s)",
-					unmarshalError,
-					cluster.Namespace,
-					cluster.ClusterID,
-				)
-				return types.ProcessorData{}, unmarshalError
-			}
-
-			glog.V(2).Infof(
-				"Successfully requested report for cluster %s (%s). Proceeding to processor.",
-				cluster.Namespace,
-				cluster.ClusterID,
-			)
-			return types.ProcessorData{
-				ClusterInfo: cluster,
-				Reports:     reports,
-			}, nil
-		}
-	}
+	glog.V(2).Infof(
+		"Successfully requested report for cluster %s (%s). Proceeding to processor.",
+		cluster.Namespace,
+		cluster.ClusterID,
+	)
 	return types.ProcessorData{
 		ClusterInfo: cluster,
-		Reports:     types.Reports{},
+		Report:     responseBody.Report,
 	}, nil
 }
 
@@ -351,11 +331,6 @@ func (r *Retriever) FetchClusters(
 			err := r.StartTokenRefresh()
 			if err != nil {
 				glog.Warningf("Unable to get CRC Token, Using previous Token: %v", err)
-			}
-			if len(ContentsMap) < 1 {
-				r.InitializeContents(hubID, dynamicClient)
-			} else if len(ContentsMap) > 0 && r.GetContentConfigMap(dynamicClient) == nil {
-				r.CreateInsightContentConfigmap(dynamicClient)
 			}
 		}
 		if len(monitor.GetManagedClusterInfo()) > 0 {
