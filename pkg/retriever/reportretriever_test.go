@@ -26,13 +26,13 @@ func TestCallInsights(t *testing.T) {
 		if r.Method != "GET" {
 			t.Errorf("Expected GET request, got %s", r.Method)
 		}
-		
+
 		// Verify the URL path contains the cluster ID
 		expectedPath := "/cluster/34c3ecc5-624a-49a5-bab8-4fdc5e51a266/reports"
 		if r.URL.Path != expectedPath {
 			t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
 		}
-		
+
 		w.Header().Set("Content-Type", "application/json")
 		// Create a mock response that matches the expected structure
 		mockResponse := `{
@@ -55,7 +55,7 @@ func TestCallInsights(t *testing.T) {
 				}
 			}
 		}`
-		fmt.Fprintln(w, mockResponse)
+		_, _ = fmt.Fprintln(w, mockResponse)
 	}
 	ts := httptest.NewServer(http.HandlerFunc(getFunc))
 	ts.EnableHTTP2 = true
@@ -149,29 +149,29 @@ func TestRetrieveReport(t *testing.T) {
 					}
 				}
 			}`
-			fmt.Fprintln(w, mockResponse)
+			_, _ = fmt.Fprintln(w, mockResponse)
 		}
 		ts := httptest.NewServer(http.HandlerFunc(getFunc))
 		defer ts.Close()
 
 		input := make(chan types.ManagedClusterInfo, 1)
 		output := make(chan types.ProcessorData, 1)
-		
+
 		cluster := types.ManagedClusterInfo{
 			Namespace: "test-cluster",
 			ClusterID: "34c3ecc5-624a-49a5-bab8-4fdc5e51a266",
 		}
 		input <- cluster
 		close(input)
-		
+
 		// Cluster is in CCX map
 		clusterCCXMap := map[string]bool{
 			"34c3ecc5-624a-49a5-bab8-4fdc5e51a266": true,
 		}
-		
+
 		ret := NewRetriever(ts.URL, nil, "testToken")
 		go ret.RetrieveReport("testHubID", input, output, clusterCCXMap, false)
-		
+
 		result := <-output
 		if result.ClusterInfo.Namespace != cluster.Namespace {
 			t.Errorf("Expected cluster namespace %s, got %s", cluster.Namespace, result.ClusterInfo.Namespace)
