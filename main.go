@@ -62,10 +62,7 @@ func main() {
 	processor := processor.NewProcessor()
 	go processor.ProcessPolicyReports(fetchPolicyReports, dynamicClient)
 
-	refreshToken := true
-	if config.Cfg.CCXToken != "" || ret.DisconnectedEnv {
-		refreshToken = false
-	}
+	refreshToken := config.Cfg.CCXToken != "" || ret.DisconnectedEnv
 	//start triggering reports for clusters
 	go ret.FetchClusters(monitor, fetchClusterIDs, refreshToken, hubID, dynamicClient)
 
