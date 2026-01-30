@@ -19,6 +19,8 @@ EXPOSE 3030
 USER ${USER_UID}
 ENTRYPOINT ["/bin/main"]
 
+ARG ACM_VERSION=${ACM_VERSION}
+
 LABEL com.redhat.component="acm-insights-client-container" \
       description="Insights client service" \
       maintainer="acm-contact@redhat.com" \
@@ -28,4 +30,5 @@ LABEL com.redhat.component="acm-insights-client-container" \
       summary="Insights client service" \
       io.k8s.display-name="Insights client" \
       io.k8s.description="Insights client service" \
-      io.openshift.tags="data,images"
+      io.openshift.tags="data,images" \
+      cpe="cpe:/a:redhat:acm:${ACM_VERSION}::el9"
