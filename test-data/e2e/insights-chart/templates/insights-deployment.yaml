@@ -86,9 +86,7 @@ spec:
         - name: USE_MOCK 
           value: "false"
         - name: CCX_TOKEN
-          value: "{{ INSIGHTS_CLIENT_CCX_TOKEN }}"  
-        - name: CCX_SERVER
-          value: "https://console.redhat.com/api/insights-results-aggregator/v2"
+          value: "{{ INSIGHTS_CLIENT_CCX_TOKEN }}"
         - name: POD_NAMESPACE
           valueFrom:
             fieldRef:

@@ -14,7 +14,7 @@ import (
 const (
 	DEFAULT_SERVICE_PORT     = ":3030"
 	DEFAULT_HTTP_TIMEOUT     = 180000                                  // 3 minutes HTTP Timeout
-	DEFAULT_CCX_SERVER       = "http://localhost:8080/api/v1/clusters" // For local use only
+	DEFAULT_CCX_SERVER       = "https://console.redhat.com/api/insights-results-aggregator/v2"
 	DEFAULT_POLL_INTERVAL    = 30                                      // 30mins default polling interval cloud.redhat.com
 	DEFAULT_REQUEST_INTERVAL = 1                                       // 1 second Interval between 2 consecutive requests
 	DEFAULT_POD_NAMESPACE    = "kube-system"                           // Namespace of insights-client pod
