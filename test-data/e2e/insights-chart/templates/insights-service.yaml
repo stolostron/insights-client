@@ -1,0 +1,26 @@
+# Copyright (c) 2021 Red Hat, Inc.
+# Copyright Contributors to the Open Cluster Management project
+
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    service.beta.openshift.io/serving-cert-secret-name: insights-client-certs
+  name: insights-client
+  labels:
+    app: insights-chart
+    chart: insights-chart-2.3.0
+    component: "insights-client"
+    release: insights-client
+    heritage: Helm
+spec:
+  ports:
+    - port: 3030
+      targetPort: 3030
+      protocol: TCP
+      name: http
+  selector:
+    app: insights-chart
+    component: "insights-client"
+    release: insights-client
+  sessionAffinity: ClientIP
