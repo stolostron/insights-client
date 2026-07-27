@@ -41,8 +41,8 @@ func main() {
 	// Read the cluster's APIServer TLS security profile and poll for changes.
 	// On change, the poller exits the process so the Deployment controller restarts
 	// the pod with the updated TLS config.
-	tlsCfg := config.GetTLSConfig(dynamicClient)
-	go config.PollAPIServerTLSProfile(context.Background(), dynamicClient)
+	tlsCfg, initialProfile, profileOK := config.GetTLSConfig(context.TODO(), dynamicClient)
+	go config.PollAPIServerTLSProfile(context.Background(), dynamicClient, initialProfile, profileOK)
 	fetchClusterIDs := make(chan types.ManagedClusterInfo)
 	fetchPolicyReports := make(chan types.ProcessorData)
 

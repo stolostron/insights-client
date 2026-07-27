@@ -3,10 +3,12 @@
 package config
 
 import (
+	"context"
 	"crypto/tls"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -46,23 +48,24 @@ func newFakeDynamicClient(objects ...runtime.Object) *dynamicfake.FakeDynamicCli
 func TestGetTLSConfig_NoAPIServer(t *testing.T) {
 	client := newFakeDynamicClient()
 
-	cfg := GetTLSConfig(client)
+	cfg, _, ok := GetTLSConfig(context.TODO(), client)
 
-	// Falls back to Intermediate profile
-	assert.NotNil(t, cfg)
-	assert.Equal(t, uint16(tls.VersionTLS12), cfg.MinVersion)
-	assert.NotEmpty(t, cfg.CipherSuites)
+	require.NotNil(t, cfg, "expected non-nil config on Intermediate fallback")
+	assert.False(t, ok, "snapshot should be invalid on fallback")
+	assert.Equal(t, uint16(tls.VersionTLS12), cfg.MinVersion, "expected TLS 1.2 fallback")
+	assert.NotEmpty(t, cfg.CipherSuites, "expected cipher suites from Intermediate profile")
 }
 
 func TestGetTLSConfig_NoProfile(t *testing.T) {
 	apiServer := newFakeAPIServer(nil)
 	client := newFakeDynamicClient(apiServer)
 
-	cfg := GetTLSConfig(client)
+	cfg, _, ok := GetTLSConfig(context.TODO(), client)
 
-	assert.NotNil(t, cfg)
-	assert.Equal(t, uint16(tls.VersionTLS12), cfg.MinVersion)
-	assert.NotEmpty(t, cfg.CipherSuites)
+	require.NotNil(t, cfg, "expected non-nil config for default profile")
+	assert.True(t, ok, "snapshot should be valid")
+	assert.Equal(t, uint16(tls.VersionTLS12), cfg.MinVersion, "expected TLS 1.2")
+	assert.NotEmpty(t, cfg.CipherSuites, "expected cipher suites")
 }
 
 func TestGetTLSConfig_IntermediateProfile(t *testing.T) {
@@ -71,11 +74,13 @@ func TestGetTLSConfig_IntermediateProfile(t *testing.T) {
 	})
 	client := newFakeDynamicClient(apiServer)
 
-	cfg := GetTLSConfig(client)
+	cfg, snapshot, ok := GetTLSConfig(context.TODO(), client)
 
-	assert.NotNil(t, cfg)
-	assert.Equal(t, uint16(tls.VersionTLS12), cfg.MinVersion)
-	assert.NotEmpty(t, cfg.CipherSuites)
+	require.NotNil(t, cfg, "expected non-nil config")
+	assert.True(t, ok, "snapshot should be valid")
+	assert.NotNil(t, snapshot, "expected non-nil snapshot for explicit profile")
+	assert.Equal(t, uint16(tls.VersionTLS12), cfg.MinVersion, "expected TLS 1.2")
+	assert.NotEmpty(t, cfg.CipherSuites, "expected cipher suites")
 }
 
 func TestGetTLSConfig_OldProfile(t *testing.T) {
@@ -84,10 +89,11 @@ func TestGetTLSConfig_OldProfile(t *testing.T) {
 	})
 	client := newFakeDynamicClient(apiServer)
 
-	cfg := GetTLSConfig(client)
+	cfg, _, ok := GetTLSConfig(context.TODO(), client)
 
-	assert.NotNil(t, cfg)
-	assert.Equal(t, uint16(tls.VersionTLS10), cfg.MinVersion)
+	require.NotNil(t, cfg, "expected non-nil config")
+	assert.True(t, ok, "snapshot should be valid")
+	assert.Equal(t, uint16(tls.VersionTLS10), cfg.MinVersion, "expected TLS 1.0")
 }
 
 func TestGetTLSConfig_ModernProfile(t *testing.T) {
@@ -96,10 +102,11 @@ func TestGetTLSConfig_ModernProfile(t *testing.T) {
 	})
 	client := newFakeDynamicClient(apiServer)
 
-	cfg := GetTLSConfig(client)
+	cfg, _, ok := GetTLSConfig(context.TODO(), client)
 
-	assert.NotNil(t, cfg)
-	assert.Equal(t, uint16(tls.VersionTLS13), cfg.MinVersion)
+	require.NotNil(t, cfg, "expected non-nil config")
+	assert.True(t, ok, "snapshot should be valid")
+	assert.Equal(t, uint16(tls.VersionTLS13), cfg.MinVersion, "expected TLS 1.3")
 }
 
 func TestGetTLSConfig_CustomProfile(t *testing.T) {
@@ -112,10 +119,11 @@ func TestGetTLSConfig_CustomProfile(t *testing.T) {
 	})
 	client := newFakeDynamicClient(apiServer)
 
-	cfg := GetTLSConfig(client)
+	cfg, _, ok := GetTLSConfig(context.TODO(), client)
 
-	assert.NotNil(t, cfg)
-	assert.Equal(t, uint16(tls.VersionTLS13), cfg.MinVersion)
+	require.NotNil(t, cfg, "expected non-nil config")
+	assert.True(t, ok, "snapshot should be valid")
+	assert.Equal(t, uint16(tls.VersionTLS13), cfg.MinVersion, "expected TLS 1.3")
 }
 
 func TestCipherSuitesFromNames(t *testing.T) {
@@ -143,7 +151,7 @@ func TestCipherSuitesFromNames_UnknownSkipped(t *testing.T) {
 func TestIntermediateProfileTLSConfig(t *testing.T) {
 	cfg := intermediateProfileTLSConfig()
 
-	assert.NotNil(t, cfg)
-	assert.Equal(t, uint16(tls.VersionTLS12), cfg.MinVersion)
-	assert.NotEmpty(t, cfg.CipherSuites)
+	require.NotNil(t, cfg, "expected non-nil config")
+	assert.Equal(t, uint16(tls.VersionTLS12), cfg.MinVersion, "expected TLS 1.2")
+	assert.NotEmpty(t, cfg.CipherSuites, "expected cipher suites")
 }

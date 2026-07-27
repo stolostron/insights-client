@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -15,20 +16,20 @@ import (
 func TestCurrentTLSProfileData_NoAPIServer(t *testing.T) {
 	client := newFakeDynamicClient()
 
-	data, err := currentTLSProfileData(client)
+	data, err := currentTLSProfileData(context.TODO(), client)
 
-	assert.Error(t, err)
-	assert.Nil(t, data)
+	assert.Error(t, err, "expected error when APIServer doesn't exist")
+	assert.Nil(t, data, "expected nil data")
 }
 
 func TestCurrentTLSProfileData_NoProfile(t *testing.T) {
 	apiServer := newFakeAPIServer(nil)
 	client := newFakeDynamicClient(apiServer)
 
-	data, err := currentTLSProfileData(client)
+	data, err := currentTLSProfileData(context.TODO(), client)
 
 	assert.NoError(t, err)
-	assert.Nil(t, data)
+	assert.Nil(t, data, "expected nil data when no profile is set")
 }
 
 func TestCurrentTLSProfileData_WithProfile(t *testing.T) {
@@ -37,10 +38,10 @@ func TestCurrentTLSProfileData_WithProfile(t *testing.T) {
 	})
 	client := newFakeDynamicClient(apiServer)
 
-	data, err := currentTLSProfileData(client)
+	data, err := currentTLSProfileData(context.TODO(), client)
 
 	assert.NoError(t, err)
-	assert.NotNil(t, data)
+	require.NotNil(t, data, "expected non-nil data for explicit profile")
 	assert.Equal(t, "Intermediate", data["type"])
 }
 
@@ -53,8 +54,11 @@ func TestPollTLSProfile_NoChangeDoesNotExit(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 
+	initial, err := currentTLSProfileData(ctx, client)
+	require.NoError(t, err)
+
 	// Should complete without exiting when the profile doesn't change.
-	pollTLSProfile(ctx, client, 50*time.Millisecond)
+	pollTLSProfile(ctx, client, 50*time.Millisecond, initial, true)
 }
 
 func TestPollTLSProfile_DetectsChange(t *testing.T) {
@@ -64,7 +68,7 @@ func TestPollTLSProfile_DetectsChange(t *testing.T) {
 	client := newFakeDynamicClient(apiServer)
 
 	// Read initial state
-	initial, err := currentTLSProfileData(client)
+	initial, err := currentTLSProfileData(context.TODO(), client)
 	assert.NoError(t, err)
 	assert.Equal(t, "Intermediate", initial["type"])
 
@@ -77,7 +81,7 @@ func TestPollTLSProfile_DetectsChange(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Verify the change is detected.
-	current, err := currentTLSProfileData(client)
+	current, err := currentTLSProfileData(context.TODO(), client)
 	assert.NoError(t, err)
 	assert.Equal(t, "Old", current["type"])
 	assert.NotEqual(t, initial["type"], current["type"])
@@ -94,8 +98,8 @@ func TestCurrentTLSProfileData_StableNormalization(t *testing.T) {
 	})
 	client := newFakeDynamicClient(apiServer)
 
-	data1, err1 := currentTLSProfileData(client)
-	data2, err2 := currentTLSProfileData(client)
+	data1, err1 := currentTLSProfileData(context.TODO(), client)
+	data2, err2 := currentTLSProfileData(context.TODO(), client)
 
 	assert.NoError(t, err1)
 	assert.NoError(t, err2)
@@ -115,7 +119,7 @@ func TestCurrentTLSProfileData_NoSpec(t *testing.T) {
 	}
 	client := newFakeDynamicClient(obj)
 
-	data, err := currentTLSProfileData(client)
+	data, err := currentTLSProfileData(context.TODO(), client)
 	assert.NoError(t, err)
 	assert.Nil(t, data)
 }

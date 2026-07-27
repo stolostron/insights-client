@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/golang/glog"
 	configv1 "github.com/openshift/api/config/v1"
@@ -17,19 +18,21 @@ import (
 	"k8s.io/client-go/dynamic"
 )
 
+const apiServerTimeout = 30 * time.Second
+
 var apiServerGVR = schema.GroupVersionResource{
 	Group:    "config.openshift.io",
 	Version:  "v1",
 	Resource: "apiservers",
 }
 
-// GetTLSConfig reads the cluster's APIServer TLS security profile and returns a *tls.Config.
-// Falls back to the OpenShift Intermediate profile if the APIServer resource is unavailable.
-func GetTLSConfig(dynamicClient dynamic.Interface) *tls.Config {
-	profileSpec, err := fetchTLSProfileSpec(dynamicClient)
+// GetTLSConfig reads the cluster's APIServer TLS security profile and returns a *tls.Config,
+// the raw profile snapshot for use as a poller baseline, and whether that snapshot is valid.
+func GetTLSConfig(ctx context.Context, dynamicClient dynamic.Interface) (*tls.Config, map[string]interface{}, bool) {
+	profileSpec, err := fetchTLSProfileSpec(ctx, dynamicClient)
 	if err != nil {
-		glog.Warningf("Could not read APIServer TLS profile, using Intermediate default: %v", err)
-		return intermediateProfileTLSConfig()
+		glog.Warning("Could not read APIServer TLS profile, using Intermediate default")
+		return intermediateProfileTLSConfig(), nil, false
 	}
 
 	tlsConfigFn, unsupported := openshifttls.NewTLSConfigFromProfile(*profileSpec)
@@ -43,12 +46,17 @@ func GetTLSConfig(dynamicClient dynamic.Interface) *tls.Config {
 	glog.Infof("TLS profile applied: min version TLS 1.%d, %d cipher suites",
 		(cfg.MinVersion&0xff)-1, len(cfg.CipherSuites))
 
-	return cfg
+	// Capture raw profile snapshot so the poller uses the exact same baseline.
+	snapshot, _ := currentTLSProfileData(ctx, dynamicClient)
+	return cfg, snapshot, true
 }
 
 // fetchTLSProfileSpec reads the APIServer resource and returns the resolved TLSProfileSpec.
-func fetchTLSProfileSpec(dynamicClient dynamic.Interface) (*configv1.TLSProfileSpec, error) {
-	obj, err := dynamicClient.Resource(apiServerGVR).Get(context.TODO(), "cluster", metav1.GetOptions{})
+func fetchTLSProfileSpec(ctx context.Context, dynamicClient dynamic.Interface) (*configv1.TLSProfileSpec, error) {
+	reqCtx, cancel := context.WithTimeout(ctx, apiServerTimeout)
+	defer cancel()
+
+	obj, err := dynamicClient.Resource(apiServerGVR).Get(reqCtx, "cluster", metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get APIServer resource: %w", err)
 	}
