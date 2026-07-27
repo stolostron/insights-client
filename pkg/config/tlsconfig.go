@@ -47,7 +47,13 @@ func GetTLSConfig(ctx context.Context, dynamicClient dynamic.Interface) (*tls.Co
 		(cfg.MinVersion&0xff)-1, len(cfg.CipherSuites))
 
 	// Capture raw profile snapshot so the poller uses the exact same baseline.
-	snapshot, _ := currentTLSProfileData(ctx, dynamicClient)
+	// This is a second read of the same resource; the window for a race is
+	// negligible at startup, and a failure here is propagated to the caller.
+	snapshot, snapErr := currentTLSProfileData(ctx, dynamicClient)
+	if snapErr != nil {
+		glog.Warning("Could not capture TLS profile snapshot for poller baseline")
+		return cfg, nil, false
+	}
 	return cfg, snapshot, true
 }
 

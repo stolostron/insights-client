@@ -6,6 +6,7 @@ package config
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"reflect"
 	"time"
@@ -49,11 +50,18 @@ func pollTLSProfile(ctx context.Context, dynamicClient dynamic.Interface, interv
 				continue
 			}
 			if !initialValid {
-				// First successful read — capture baseline instead of restarting.
-				initial = current
-				initialValid = true
-				glog.Info("Captured initial TLS profile baseline")
-				continue
+				// Startup read failed; pod is running with Intermediate fallback.
+				// If the cluster profile is effectively Intermediate (nil = default,
+				// or explicit Intermediate), we're already correct — baseline it.
+				// Otherwise restart to apply the actual profile.
+				if isEffectivelyIntermediate(current) {
+					initial = current
+					initialValid = true
+					glog.Info("Cluster profile matches Intermediate fallback, baselined")
+					continue
+				}
+				glog.Info("APIServer now reachable, cluster profile differs from Intermediate fallback, restarting")
+				os.Exit(1)
 			}
 			if !reflect.DeepEqual(initial, current) {
 				glog.Info("APIServer TLS profile changed, restarting to apply new config")
@@ -71,7 +79,7 @@ func currentTLSProfileData(ctx context.Context, dynamicClient dynamic.Interface)
 
 	obj, err := dynamicClient.Resource(apiServerGVR).Get(reqCtx, "cluster", metav1.GetOptions{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get APIServer resource: %w", err)
 	}
 
 	spec, ok := obj.Object["spec"].(map[string]interface{})
@@ -87,13 +95,23 @@ func currentTLSProfileData(ctx context.Context, dynamicClient dynamic.Interface)
 	// Normalize through JSON round-trip for stable deep-equal comparison.
 	profileBytes, err := json.Marshal(profileRaw)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to marshal TLS profile data: %w", err)
 	}
 
 	var normalized map[string]interface{}
 	if err := json.Unmarshal(profileBytes, &normalized); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unmarshal TLS profile data: %w", err)
 	}
 
 	return normalized, nil
+}
+
+// isEffectivelyIntermediate returns true when the raw profile data represents
+// the Intermediate profile (nil means default = Intermediate, or explicit type).
+func isEffectivelyIntermediate(data map[string]interface{}) bool {
+	if data == nil {
+		return true // no explicit profile = default = Intermediate
+	}
+	profileType, _ := data["type"].(string)
+	return profileType == "Intermediate"
 }
