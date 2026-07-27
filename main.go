@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"flag"
 	"fmt"
@@ -36,6 +37,12 @@ func main() {
 	config.SetupConfig()
 
 	dynamicClient := config.GetDynamicClient()
+
+	// Read the cluster's APIServer TLS security profile and poll for changes.
+	// On change, the poller exits the process so the Deployment controller restarts
+	// the pod with the updated TLS config.
+	tlsCfg := config.GetTLSConfig(dynamicClient)
+	go config.PollAPIServerTLSProfile(context.Background(), dynamicClient)
 	fetchClusterIDs := make(chan types.ManagedClusterInfo)
 	fetchPolicyReports := make(chan types.ProcessorData)
 
@@ -43,7 +50,7 @@ func main() {
 	go monitor.WatchClusters()
 
 	// Set up Retriever and cache the Insights data
-	ret := retriever.NewRetriever(config.Cfg.CCXServer, nil, config.Cfg.CCXToken)
+	ret := retriever.NewRetriever(config.Cfg.CCXServer, nil, config.Cfg.CCXToken, tlsCfg)
 	//Wait for hub cluster id to make GET API call
 	hubID := "-1"
 	for hubID == "-1" {
@@ -68,19 +75,10 @@ func main() {
 
 	router := mux.NewRouter()
 
-	// Configure TLS
-	cfg := &tls.Config{
-		MinVersion:               tls.VersionTLS12,
-		CurvePreferences:         []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
-		PreferServerCipherSuites: true,
-		CipherSuites: []uint16{
-			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-		},
-	}
 	srv := &http.Server{
 		Addr:              config.Cfg.ServicePort,
 		Handler:           router,
-		TLSConfig:         cfg,
+		TLSConfig:         tlsCfg,
 		ReadHeaderTimeout: time.Duration(config.Cfg.HTTPTimeout) * time.Millisecond,
 		ReadTimeout:       time.Duration(config.Cfg.HTTPTimeout) * time.Millisecond,
 		WriteTimeout:      time.Duration(config.Cfg.HTTPTimeout) * time.Millisecond,
