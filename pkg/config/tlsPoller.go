@@ -1,4 +1,3 @@
-// Copyright (c) 2021 Red Hat, Inc.
 // Copyright Contributors to the Open Cluster Management project
 
 package config
@@ -61,10 +60,17 @@ func pollTLSProfile(ctx context.Context, dynamicClient dynamic.Interface, interv
 					continue
 				}
 				glog.Info("APIServer now reachable, cluster profile differs from Intermediate fallback, restarting")
+				glog.Flush()
 				os.Exit(1)
+			}
+			// Treat nil (default) and explicit Intermediate as equivalent
+			// to avoid spurious restarts when an admin toggles between them.
+			if isEffectivelyIntermediate(initial) && isEffectivelyIntermediate(current) {
+				continue
 			}
 			if !reflect.DeepEqual(initial, current) {
 				glog.Info("APIServer TLS profile changed, restarting to apply new config")
+				glog.Flush()
 				os.Exit(1)
 			}
 		}

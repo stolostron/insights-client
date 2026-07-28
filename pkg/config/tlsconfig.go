@@ -7,7 +7,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/golang/glog"
@@ -114,37 +113,3 @@ func intermediateProfileTLSConfig() *tls.Config {
 	return cfg
 }
 
-// cipherSuitesFromNames resolves IANA cipher suite names to crypto/tls uint16 IDs.
-func cipherSuitesFromNames(ciphers string) []uint16 {
-	if ciphers == "" {
-		return nil
-	}
-
-	lookup := map[string]uint16{}
-	for _, cs := range tls.CipherSuites() {
-		lookup[cs.Name] = cs.ID
-	}
-	for _, cs := range tls.InsecureCipherSuites() {
-		lookup[cs.Name] = cs.ID
-	}
-
-	var result []uint16
-	var unknown []string
-	for _, name := range strings.Split(ciphers, ",") {
-		name = strings.TrimSpace(name)
-		if name == "" {
-			continue
-		}
-		if id, ok := lookup[name]; ok {
-			result = append(result, id)
-		} else {
-			unknown = append(unknown, name)
-		}
-	}
-
-	if len(unknown) > 0 {
-		glog.Warningf("TLS cipher suites not recognized by Go: %v", unknown)
-	}
-
-	return result
-}

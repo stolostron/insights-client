@@ -126,28 +126,6 @@ func TestGetTLSConfig_CustomProfile(t *testing.T) {
 	assert.Equal(t, uint16(tls.VersionTLS13), cfg.MinVersion, "expected TLS 1.3")
 }
 
-func TestCipherSuitesFromNames(t *testing.T) {
-	names := "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
-	result := cipherSuitesFromNames(names)
-
-	assert.Len(t, result, 2)
-	assert.Equal(t, tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, result[0])
-	assert.Equal(t, tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384, result[1])
-}
-
-func TestCipherSuitesFromNames_Empty(t *testing.T) {
-	result := cipherSuitesFromNames("")
-	assert.Nil(t, result)
-}
-
-func TestCipherSuitesFromNames_UnknownSkipped(t *testing.T) {
-	names := "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,BOGUS_CIPHER"
-	result := cipherSuitesFromNames(names)
-
-	assert.Len(t, result, 1)
-	assert.Equal(t, tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, result[0])
-}
-
 func TestIntermediateProfileTLSConfig(t *testing.T) {
 	cfg := intermediateProfileTLSConfig()
 
