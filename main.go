@@ -49,8 +49,11 @@ func main() {
 	monitor := monitor.NewClusterMonitor()
 	go monitor.WatchClusters()
 
-	// Set up Retriever and cache the Insights data
-	ret := retriever.NewRetriever(config.Cfg.CCXServer, nil, config.Cfg.CCXToken, tlsCfg)
+	// Set up Retriever and cache the Insights data.
+	// The Retriever connects to an external endpoint (CCX/Insights), so it uses
+	// a permissive TLS config instead of the cluster profile — the external server's
+	// TLS requirements are outside the cluster admin's control.
+	ret := retriever.NewRetriever(config.Cfg.CCXServer, nil, config.Cfg.CCXToken, nil)
 	//Wait for hub cluster id to make GET API call
 	hubID := "-1"
 	for hubID == "-1" {
