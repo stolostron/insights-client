@@ -45,9 +45,10 @@ type serializedAuth struct {
 	Auth string `json:"auth"`
 }
 
-// NewRetriever ...
+// NewRetriever creates a Retriever. If client is nil, a default HTTP client is created using
+// the provided tlsCfg for TLS settings. Pass nil for tlsCfg to use Go defaults.
 func NewRetriever(ReportUrl string, client *http.Client,
-	token string) *Retriever {
+	token string, tlsCfg *tls.Config) *Retriever {
 	if client == nil {
 		clientTransport := &http.Transport{
 			Proxy: knet.NewProxierWithNoProxyCIDR(http.ProxyFromEnvironment),
@@ -58,8 +59,11 @@ func NewRetriever(ReportUrl string, client *http.Client,
 			TLSHandshakeTimeout: 10 * time.Second,
 			DisableKeepAlives:   true,
 		}
+		if tlsCfg == nil {
+			tlsCfg = &tls.Config{MinVersion: tls.VersionTLS12} // #nosec G402
+		}
 		if config.Cfg.CACert != "" {
-			// If caCert is defiend in Insights-client deployment - we need to use it in http client
+			// If caCert is defined in Insights-client deployment - we need to use it in http client
 			decodedCert, err := b64.URLEncoding.DecodeString(config.Cfg.CACert)
 			if err != nil {
 				// Exit because this is an unrecoverable configuration problem.
@@ -67,13 +71,9 @@ func NewRetriever(ReportUrl string, client *http.Client,
 			}
 			caCertPool := x509.NewCertPool()
 			caCertPool.AppendCertsFromPEM(decodedCert)
-
-			tlsCfg := &tls.Config{
-				MinVersion: tls.VersionTLS12,
-				RootCAs:    caCertPool,
-			}
-			clientTransport.TLSClientConfig = tlsCfg
+			tlsCfg.RootCAs = caCertPool
 		}
+		clientTransport.TLSClientConfig = tlsCfg
 		client = &http.Client{Transport: clientTransport}
 	}
 	r := &Retriever{

@@ -61,7 +61,7 @@ func TestCallInsights(t *testing.T) {
 	ts.EnableHTTP2 = true
 	defer ts.Close()
 
-	ret := NewRetriever(ts.URL, nil, "testToken")
+	ret := NewRetriever(ts.URL, nil, "testToken", nil)
 	req, _ := ret.CreateInsightsRequest(
 		context.TODO(),
 		ts.URL,
@@ -101,7 +101,7 @@ func Test_FetchClusters(t *testing.T) {
 
 	fetchClusterIDs := make(chan types.ManagedClusterInfo)
 
-	ret := NewRetriever("testServer", nil, "testToken")
+	ret := NewRetriever("testServer", nil, "testToken", nil)
 
 	go ret.FetchClusters(monitor, fetchClusterIDs, false, "323a00cd-428a-49fb-80ab-201d2a5d3050", fakeDynamicClient)
 	testData := <-fetchClusterIDs
@@ -169,7 +169,7 @@ func TestRetrieveReport(t *testing.T) {
 			"34c3ecc5-624a-49a5-bab8-4fdc5e51a266": true,
 		}
 
-		ret := NewRetriever(ts.URL, nil, "testToken")
+		ret := NewRetriever(ts.URL, nil, "testToken", nil)
 		go ret.RetrieveReport("testHubID", input, output, clusterCCXMap, false)
 
 		result := <-output

@@ -48,7 +48,7 @@ var (
 func setUp(t *testing.T) {
 	fetchPolicyReports = make(chan types.ProcessorData, 1)
 
-	ret = retriever.NewRetriever("testReportUrl", nil, "testToken")
+	ret = retriever.NewRetriever("testReportUrl", nil, "testToken", nil)
 
 	mngd = types.ManagedClusterInfo{Namespace: "testCluster", ClusterID: "972ea7cf-7428-438f-ade8-12ac4794ede0"}
 
