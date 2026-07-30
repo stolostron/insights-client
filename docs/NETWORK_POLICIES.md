@@ -28,10 +28,10 @@ automatically removed if the Insights component is disabled on the MultiClusterH
 
 ### insights-client
 
-| Direction | Peer | Port | Rationale |
-|---|---|---|---|
-| Ingress | *(none allowed)* | — | insights-client does not serve any active endpoints. It runs an HTTP/TLS listener on port 3030 but has no registered route handlers, so no external traffic needs to reach it. The policy selects the pod and declares `Ingress` policyType with no ingress rules, effectively denying all inbound traffic. |
-| Egress | *(not restricted — Ingress-only policy)* | — | insights-client requires egress to the Kubernetes API (watch ManagedClusters, read pull-secrets, CRUD PolicyReports, read ClusterVersions and APIServer config) and to the external CCX/Insights endpoint (`console.redhat.com`, port 443) to fetch cluster reports. OVN-Kubernetes handles `kubernetes.default.svc` ClusterIP traffic via the OVN service load balancer before NetworkPolicy evaluation, so no egress rule can match kube-API traffic. Applying an Egress policyType would silently block both API server access and external report retrieval. |
+| Direction | Peer                                     | Port | Rationale |
+|---|------------------------------------------|---|---|
+| Ingress | *(none allowed)*                         | — | insights-client does not serve any active endpoints. It runs an HTTP/TLS listener on port 3030 but has no registered route handlers, so no external traffic needs to reach it. The policy selects the pod and declares `Ingress` policyType with no ingress rules, effectively denying all inbound traffic. |
+| Egress | *(not restricted by this NetworkPolicy)* | — | insights-client requires egress to the Kubernetes API (watch ManagedClusters, read pull-secrets, CRUD PolicyReports, read ClusterVersions and APIServer config) and to the external CCX/Insights endpoint (`console.redhat.com`, port 443) to fetch cluster reports. OVN-Kubernetes handles `kubernetes.default.svc` ClusterIP traffic via the OVN service load balancer before NetworkPolicy evaluation, so no egress rule can match kube-API traffic. Applying an Egress policyType would silently block both API server access and external report retrieval. |
 
 ## Testing
 
