@@ -53,6 +53,40 @@ func Test_SetDefaultInt_02(t *testing.T) {
 	}
 }
 
+// Should use default value when environment variable does not exist.
+func Test_SetDefaultSecret_01(t *testing.T) {
+
+	property := ""
+	setDefaultSecret(&property, "ENV_VARIABLE_NOT_DEFINED", "default-value")
+
+	if property != "default-value" {
+		t.Errorf("Failed testing setDefaultSecret()  Expected: %s  Got: %s", "default-value", property)
+	}
+}
+
+// Should use value from environment variable if it exists.
+func Test_SetDefaultSecret_02(t *testing.T) {
+
+	_ = os.Setenv("TEST_SECRET_VARIABLE", "secret-from-env")
+	property := ""
+	setDefaultSecret(&property, "TEST_SECRET_VARIABLE", "default-value")
+
+	if property != "secret-from-env" {
+		t.Errorf("Failed testing setDefaultSecret()  Expected: %s  Got: %s", "secret-from-env", property)
+	}
+}
+
+// Should not set default value when defaultVal is empty.
+func Test_SetDefaultSecret_03(t *testing.T) {
+
+	property := ""
+	setDefaultSecret(&property, "ENV_VARIABLE_NOT_DEFINED", "")
+
+	if property != "" {
+		t.Errorf("Failed testing setDefaultSecret()  Expected empty string  Got: %s", property)
+	}
+}
+
 func Test_SetDefaultBool_01(t *testing.T) {
 
 	var property bool
