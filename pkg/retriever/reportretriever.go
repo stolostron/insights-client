@@ -269,7 +269,6 @@ func (r *Retriever) CallInsights(req *http.Request, cluster types.ManagedCluster
 		}
 		glog.V(2).Infof("Response status for report %v", res.Status)
 		glog.V(3).Infof("Response body for report  %v", req.Body)
-		glog.V(3).Infof("Response header for report %v", req.Header)
 		return types.ResponseBody{}, e.New("no Success HTTP Response code ")
 	}
 	defer func(Body io.ReadCloser) {
