@@ -27,6 +27,7 @@ require (
 )
 
 require (
+	github.com/google/uuid v1.6.0
 	github.com/openshift/api v0.0.0-20260213155647-8fe9fe363807
 	github.com/openshift/controller-runtime-common v0.0.0-20260213175913-767fef058eca
 )
@@ -45,7 +46,6 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/gnostic-models v0.7.0 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect

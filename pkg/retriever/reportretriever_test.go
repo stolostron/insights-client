@@ -82,6 +82,26 @@ func TestCallInsights(t *testing.T) {
 
 }
 
+func TestCreateInsightsRequestRejectsInvalidClusterID(t *testing.T) {
+	ret := NewRetriever("https://example.com", nil, "testToken", nil)
+	for _, id := range []string{
+		"../../api/accounts_mgmt/v1/subscriptions",
+		"not-a-uuid",
+		"34c3ecc5-624a-49a5-bab8-4fdc5e51a266/../other",
+		"",
+	} {
+		req, err := ret.CreateInsightsRequest(
+			context.TODO(),
+			"https://example.com",
+			types.ManagedClusterInfo{Namespace: "testCluster", ClusterID: id},
+			"34c3ecc5-624a-49a5-bab8-4fdc5e51a266",
+		)
+		if err == nil || req != nil {
+			t.Errorf("expected ClusterID %q to be rejected, got req=%v err=%v", id, req, err)
+		}
+	}
+}
+
 func Test_FetchClusters(t *testing.T) {
 	// Establish the config
 	config.SetupConfig()

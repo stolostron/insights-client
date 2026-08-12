@@ -14,11 +14,13 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/uuid"
 	"github.com/stolostron/insights-client/pkg/config"
 	"github.com/stolostron/insights-client/pkg/monitor"
 	"github.com/stolostron/insights-client/pkg/types"
@@ -224,15 +226,18 @@ func (r *Retriever) CreateInsightsRequest(
 	cluster types.ManagedClusterInfo,
 	hubID string,
 ) (*http.Request, error) {
-	glog.Infof(
-		"Creating Request for cluster %s (%s) using Insights URL %s",
-		cluster.Namespace,
-		cluster.ClusterID,
-		endpoint+"/cluster/"+cluster.ClusterID+"/reports",
-	)
-	req, err := http.NewRequest("GET", endpoint+"/cluster/"+cluster.ClusterID+"/reports", nil)
+	// ClusterID originates from the spoke-controlled id.openshift.io ClusterClaim;
+	// reject anything that is not a well-formed UUID, so it cannot traverse or
+	// rewrite the Insights API path.
+	if _, err := uuid.Parse(cluster.ClusterID); err != nil {
+		glog.Warningf("Refusing Insights request: ClusterID is not a valid UUID")
+		return nil, fmt.Errorf("clusterID is not a valid UUID")
+	}
+	reqURL := endpoint + "/cluster/" + url.PathEscape(cluster.ClusterID) + "/reports"
+	glog.Infof("Creating Insights report request")
+	req, err := http.NewRequest("GET", reqURL, nil)
 	if err != nil {
-		glog.Warningf("Error creating HttpRequest for cluster %s (%s), %v", cluster.Namespace, cluster.ClusterID, err)
+		glog.Warningf("Error creating Insights report HttpRequest: %v", err)
 		return nil, err
 	}
 	// userAgent for value will be updated to insights-client once the
