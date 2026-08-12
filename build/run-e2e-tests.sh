@@ -137,7 +137,7 @@ test_content_and_local_cluster_report(){
 	pod=$(oc get pods | grep insights-client | cut -d' ' -f1)
 	oc logs $pod
 	log=$(oc logs $pod) 
-	log_msg=$(echo $log| grep "Creating Insights report request")
+	log_msg=$(echo $log| grep "Making GET call for  Contents")
 	if [[ -n "$log_msg" ]]; then
 	    echo "Pod log has policy report"
 	else
