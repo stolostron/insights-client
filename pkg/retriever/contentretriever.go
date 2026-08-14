@@ -90,9 +90,11 @@ func (r *Retriever) CallContents(req *http.Request) (types.ContentsResponse, err
 		glog.V(2).Infof("Contents statuscode %v", res.Status)
 		glog.V(3).Infof("Contents responseBody %v", res.Body)
 		glog.V(3).Infof("Contents request %v", res.Request)
-		return types.ContentsResponse{}, e.New("No Success HTTP Response code ")
+		return types.ContentsResponse{}, e.New("no Success HTTP Response code ")
 	}
-	defer res.Body.Close()
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(res.Body)
 	data, _ := io.ReadAll(res.Body)
 	// unmarshal response data into the ResponseBody struct
 	unmarshalError := json.Unmarshal(data, &responseBody)

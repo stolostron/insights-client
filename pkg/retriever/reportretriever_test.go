@@ -32,7 +32,7 @@ func TestCallInsights(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 
 			response := mocks.GetMockData(string(postBody.Clusters[0]))
-			fmt.Fprintln(w, string(response))
+			_, _ = fmt.Fprintln(w, string(response))
 
 		}
 

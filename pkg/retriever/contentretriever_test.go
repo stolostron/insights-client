@@ -33,7 +33,7 @@ func TestCallContents(t *testing.T) {
 	postFunc := func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		response := mocks.GetMockContent()
-		fmt.Fprintln(w, string(response))
+		_, _ = fmt.Fprintln(w, string(response))
 	}
 	ts := httptest.NewServer(http.HandlerFunc(postFunc))
 	ts.EnableHTTP2 = true
