@@ -73,7 +73,7 @@ func main() {
 	processor := processor.NewProcessor()
 	go processor.ProcessPolicyReports(fetchPolicyReports, dynamicClient)
 
-	refreshToken := true
+	refreshToken := true //nolint:staticcheck // "could merge conditional assignment into variable declaration"
 	if config.Cfg.CCXToken != "" || ret.DisconnectedEnv {
 		refreshToken = false
 	}
