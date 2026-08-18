@@ -43,8 +43,8 @@ func SetupConfig() {
 	// Simply put, the order of preference is env -> default constants (from left to right)
 	setDefault(&Cfg.ServicePort, "SERVICE_PORT", DEFAULT_SERVICE_PORT)
 	setDefault(&Cfg.CCXServer, "CCX_SERVER", DEFAULT_CCX_SERVER)
-	setDefaultSecret(&Cfg.CCXToken, "CCX_TOKEN", "")
-	setDefaultSecret(&Cfg.CACert, "CACert", "")
+	setDefault(&Cfg.CCXToken, "CCX_TOKEN", "")
+	setDefault(&Cfg.CACert, "CACert", "")
 	setDefault(&Cfg.PodNamespace, "POD_NAMESPACE", DEFAULT_POD_NAMESPACE)
 	setDefaultInt(&Cfg.HTTPTimeout, "HTTP_TIMEOUT", DEFAULT_HTTP_TIMEOUT)
 	setDefaultInt(&Cfg.PollInterval, "POLL_INTERVAL", DEFAULT_POLL_INTERVAL)
@@ -63,16 +63,6 @@ func setDefault(field *string, env, defaultVal string) {
 		*field = val
 	} else if *field == "" && defaultVal != "" {
 		glog.V(2).Infof("%s not set, using default value: %s", env, defaultVal)
-		*field = defaultVal
-	}
-}
-
-func setDefaultSecret(field *string, env, defaultVal string) {
-	if val := os.Getenv(env); val != "" {
-		glog.V(2).Infof(message, env, "[REDACTED]")
-		*field = val
-	} else if *field == "" && defaultVal != "" {
-		glog.V(2).Infof("%s not set, using default value: %s", env, "[REDACTED]")
 		*field = defaultVal
 	}
 }
