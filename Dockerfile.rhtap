@@ -1,14 +1,14 @@
 # Copyright (c) 2024 Red Hat, Inc.
 # Copyright Contributors to the Open Cluster Management project
 
-FROM brew.registry.redhat.io/rh-osbs/openshift-golang-builder:rhel_9_1.23 AS builder
+FROM brew.registry.redhat.io/rh-osbs/openshift-golang-builder:rhel_9_1.26 AS builder
 
 WORKDIR /go/src/github.com/stolostron/insights-client
 COPY . .
 RUN go mod vendor
 RUN CGO_ENABLED=1 go build -trimpath -o main main.go
 
-FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
+FROM registry.redhat.io/ubi9/ubi-minimal-pqc:latest
 
 COPY --from=builder /go/src/github.com/stolostron/insights-client/main /bin/main
 
@@ -19,13 +19,16 @@ EXPOSE 3030
 USER ${USER_UID}
 ENTRYPOINT ["/bin/main"]
 
+ARG ACM_VERSION=${ACM_VERSION}
+
 LABEL com.redhat.component="acm-insights-client-container" \
       description="Insights client service" \
       maintainer="acm-contact@redhat.com" \
-      name="insights-client" \
+      name="rhacm2/insights-client-rhel9" \
       org.label-schema.license="Red Hat Advanced Cluster Management for Kubernetes EULA" \
       org.label-schema.schema-version="1.0" \
       summary="Insights client service" \
       io.k8s.display-name="Insights client" \
       io.k8s.description="Insights client service" \
-      io.openshift.tags="data,images"
+      io.openshift.tags="data,images" \
+      cpe="cpe:/a:redhat:acm:${ACM_VERSION}::el9"

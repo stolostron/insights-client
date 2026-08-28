@@ -1,164 +1,100 @@
 {
-    "reports": {
-      "972ea7cf-7428-438f-ade8-12ac4794ede0": {
-        "analysis_metadata": {
-          "execution_context": "ccx_ocp_core.context.InsightsOperatorContext",
-          "finish": "2021-05-03T19:20:27.022804+00:00",
-          "plugin_sets": {
-            "ccx_ocp_core": {
-              "commit": null,
-              "version": "ccx_ocp_core-2021.4.28-1"
-            },
-            "ccx_rules_ocp": {
-              "commit": null,
-              "version": "ccx_rules_ocp-2021.4.28-1"
-            },
-            "insights-core": {
-              "commit": "placeholder",
-              "version": "insights-core-3.0.176-1"
-            }
-          },
-          "start": "2021-05-03T19:20:25.100674+00:00"
+  "status": "ok",
+  "report": {
+    "data": [
+      {
+        "rule_id": "master_defined_as_machinesets|MASTER_DEFINED_AS_MACHINESETS",
+        "created_at": "2021-05-03T19:20:25.100674Z",
+        "description": "Master nodes are defined as machinesets",
+        "details": "Master nodes should not be defined as machinesets as this can cause issues with cluster management",
+        "disable_feedback": "",
+        "disabled": false,
+        "disabled_at": "",
+        "extra_data": {
+          "error_key": "MASTER_DEFINED_AS_MACHINESETS",
+          "result": ["d50d0126-c90b-4428-a75f-dc08cd02960a-master-test"],
+          "type": "rule"
         },
-        "fingerprints": [],
-        "info": [
-          {
-            "component": "ccx_rules_ocp.external.rules.cluster_id.report",
-            "details": {
-              "cluster_id": "972ea7cf-7428-438f-ade8-12ac4794ede0",
-              "grafana_link": "https://telemeter-lts-dashboards.datahub.redhat.com/d/kSomLV7Wk/pre-production-cluster-by-id?orgId=1&var-_id=972ea7cf-7428-438f-ade8-12ac4794ede0",
-              "info_key": "GRAFANA_LINK",
-              "type": "info"
-            },
-            "info_id": "cluster_id|GRAFANA_LINK",
-            "key": "GRAFANA_LINK",
-            "links": {},
-            "tags": [],
-            "type": "info"
-          }
-        ],
-        "reports": [
-          {
-            "component": "ccx_rules_ocp.external.rules.master_defined_as_machinesets.report",
-            "details": {
-              "error_key": "MASTER_DEFINED_AS_MACHINESETS",
-              "result": [
-                "d50d0126-c90b-4428-a75f-dc08cd02960a-master-test"
-              ],
-              "type": "rule"
-            },
-            "key": "MASTER_DEFINED_AS_MACHINESETS",
-            "links": {
-              "jira": [
-                "https://issues.redhat.com/browse/INSIGHTOCP-89"
-              ],
-              "kcs": [
-                "https://access.redhat.com/solutions/5238591"
-              ]
-            },
-            "rule_id": "master_defined_as_machinesets|MASTER_DEFINED_AS_MACHINESETS",
-            "tags": [],
-            "type": "rule"
-          },
-          {
-            "component": "ccx_rules_ocp.external.rules.container_max_root_partition_size.report",
-            "details": {
-              "error_key": "CONTAINER_ROOT_PARTITION_SIZE",
-              "mcps": [
-                "master"
-              ],
-              "type": "rule"
-            },
-            "key": "CONTAINER_ROOT_PARTITION_SIZE",
-            "links": {
-              "kcs": [
-                "https://access.redhat.com/solutions/5216861"
-              ]
-            },
-            "rule_id": "container_max_root_partition_size|CONTAINER_ROOT_PARTITION_SIZE",
-            "tags": [],
-            "type": "rule"
-          }
-        ],
-        "skips": [
-          {
-            "details": "All: ['ccx_rules_ocp.external.rules.operator_unmanaged.get_unmanaged_operators'] Any: ",
-            "reason": "MISSING_REQUIREMENTS",
-            "rule_fqdn": "ccx_rules_ocp.external.rules.operator_unmanaged.report",
-            "type": "skip"
-          },
-          {
-            "details": "All: ['ccx_rules_ocp.external.rules.vsphere_upi_machine_is_in_phase.check_prometheus_alert'] Any: ",
-            "reason": "MISSING_REQUIREMENTS",
-            "rule_fqdn": "ccx_rules_ocp.external.rules.vsphere_upi_machine_is_in_phase.report",
-            "type": "skip"
-          },
-          {
-            "details": "All: ['ccx_rules_ocp.external.rules.same_egress_ip_in_multiple_netnamespaces.netnamespaces_contains_same_egress_ip'] Any: ",
-            "reason": "MISSING_REQUIREMENTS",
-            "rule_fqdn": "ccx_rules_ocp.external.rules.same_egress_ip_in_multiple_netnamespaces.report",
-            "type": "skip"
-          },
-          {
-            "details": "All: ['ccx_rules_ocp.external.rules.image_registry_storage.image_registry_bad_storage'] Any: ",
-            "reason": "MISSING_REQUIREMENTS",
-            "rule_fqdn": "ccx_rules_ocp.external.rules.image_registry_storage.report",
-            "type": "skip"
-          },
-          {
-            "details": "All: ['ccx_rules_ocp.external.rules.openshift_sdn_egress_ip_in_multiple_hostsubnets.EgressIPsInMultipleHostsubnets'] Any: ",
-            "reason": "MISSING_REQUIREMENTS",
-            "rule_fqdn": "ccx_rules_ocp.external.rules.openshift_sdn_egress_ip_in_multiple_hostsubnets.report",
-            "type": "skip"
-          },
-          {
-            "details": "All: ['ccx_rules_ocp.external.rules.openshift_sdn_egress_ip_in_no_hostsubnet.EgressIPsInNoHostsubnets'] Any: ",
-            "reason": "MISSING_REQUIREMENTS",
-            "rule_fqdn": "ccx_rules_ocp.external.rules.openshift_sdn_egress_ip_in_no_hostsubnet.report",
-            "type": "skip"
-          },
-          {
-            "details": "All: ['ccx_rules_ocp.external.rules.subnets_migration_failure_massive_egressip.check_hostsubnets'] Any: ",
-            "reason": "MISSING_REQUIREMENTS",
-            "rule_fqdn": "ccx_rules_ocp.external.rules.subnets_migration_failure_massive_egressip.report",
-            "type": "skip"
-          },
-          {
-            "details": "All: ['ccx_ocp_core.utils.affected_version.ensure_is_affected_condition.<locals>.version_condition', 'ccx_rules_ocp.external.rules.tls_handshake_fails_in_azure.check_no_azure_routefix_namespace'] Any: ",
-            "reason": "MISSING_REQUIREMENTS",
-            "rule_fqdn": "ccx_rules_ocp.external.rules.tls_handshake_fails_in_azure.report",
-            "type": "skip"
-          },
-          {
-            "details": "All: ['ccx_rules_ocp.external.rules.lib_bucket_provisioner_check.check_install_plans', 'ccx_rules_ocp.external.rules.lib_bucket_provisioner_check.check_service_accounts'] Any: ",
-            "reason": "MISSING_REQUIREMENTS",
-            "rule_fqdn": "ccx_rules_ocp.external.rules.lib_bucket_provisioner_check.report",
-            "type": "skip"
-          },
-          {
-            "details": "All: ['ccx_ocp_core.utils.affected_version.ensure_is_affected_condition.<locals>.version_condition'] Any: ",
-            "reason": "MISSING_REQUIREMENTS",
-            "rule_fqdn": "ccx_rules_ocp.external.bug_rules.bug_1893386.report",
-            "type": "skip"
-          },
-          {
-            "details": "All: ['ccx_ocp_core.utils.affected_version.ensure_is_affected_condition.<locals>.version_condition', 'ccx_rules_ocp.external.rules.cmo_container_run_as_non_root.check_prometheus_alert'] Any: ",
-            "reason": "MISSING_REQUIREMENTS",
-            "rule_fqdn": "ccx_rules_ocp.external.rules.cmo_container_run_as_non_root.report",
-            "type": "skip"
-          },
-          {
-            "details": "All: ['ccx_rules_ocp.external.rules.prometheus_backed_by_pvc.check_desired_version', 'ccx_rules_ocp.external.rules.prometheus_backed_by_pvc.check_cluster_monitoring_config_map'] Any: ",
-            "reason": "MISSING_REQUIREMENTS",
-            "rule_fqdn": "ccx_rules_ocp.external.rules.prometheus_backed_by_pvc.report",
-            "type": "skip"
-          }
-        ],
-        "system": {
-          "hostname": null,
-          "metadata": {}
-        }
+        "impacted": "2021-05-03T19:20:25.100674Z",
+        "internal": false,
+        "more_info": "https://issues.redhat.com/browse/INSIGHTOCP-89",
+        "reason": "Master nodes are defined as machinesets which is not recommended",
+        "resolution": "Remove master nodes from machinesets configuration",
+        "tags": ["openshift", "configuration"],
+        "total_risk": 3,
+        "user_vote": 0
+      },
+      {
+        "rule_id": "container_max_root_partition_size|CONTAINER_ROOT_PARTITION_SIZE",
+        "created_at": "2021-05-03T19:20:25.100674Z",
+        "description": "Container max root partition size issue",
+        "details": "Container root partition size exceeds recommended limits",
+        "disable_feedback": "",
+        "disabled": false,
+        "disabled_at": "",
+        "extra_data": {
+          "error_key": "CONTAINER_ROOT_PARTITION_SIZE",
+          "mcps": ["master"],
+          "type": "rule"
+        },
+        "impacted": "2021-05-03T19:20:25.100674Z",
+        "internal": false,
+        "more_info": "https://access.redhat.com/solutions/5216861",
+        "reason": "Container root partition size is too large",
+        "resolution": "Configure proper container runtime settings",
+        "tags": ["openshift", "performance"],
+        "total_risk": 2,
+        "user_vote": 0
+      },
+      {
+        "rule_id": "default.policy1",
+        "created_at": "2023-12-04T18:47:37Z",
+        "description": "NonCompliant; violation - namespaces [test-ns] not found",
+        "details": "Policy violation detected for namespace test-ns",
+        "disable_feedback": "",
+        "disabled": false,
+        "disabled_at": "",
+        "extra_data": {
+          "error_key": "POLICY_VIOLATION",
+          "type": "rule"
+        },
+        "impacted": "2023-12-04T18:47:37Z",
+        "internal": false,
+        "more_info": "",
+        "reason": "Namespace test-ns not found",
+        "resolution": "Create the required namespace or update policy",
+        "tags": ["CM", "Configuration Management"],
+        "total_risk": 4,
+        "user_vote": 0
+      },
+      {
+        "rule_id": "default.policy1",
+        "created_at": "2023-12-04T18:47:37Z",
+        "description": "NonCompliant; violation - some Gatekeeper audit failure message",
+        "details": "Gatekeeper audit failure detected",
+        "disable_feedback": "",
+        "disabled": false,
+        "disabled_at": "",
+        "extra_data": {
+          "error_key": "GATEKEEPER_AUDIT_FAILURE",
+          "type": "rule"
+        },
+        "impacted": "2023-12-04T18:47:37Z",
+        "internal": false,
+        "more_info": "",
+        "reason": "Gatekeeper audit failure",
+        "resolution": "Review and fix Gatekeeper configuration",
+        "tags": ["CM", "Configuration Management"],
+        "total_risk": 3,
+        "user_vote": 0
       }
+    ],
+    "meta": {
+      "cluster_name": "972ea7cf-7428-438f-ade8-12ac4794ede0",
+      "count": 4,
+      "gathered_at": "2021-05-03T19:20:27.022804Z",
+      "last_checked_at": "2021-05-03T19:20:27.022804Z",
+      "managed": false
     }
+  }
 }
-  

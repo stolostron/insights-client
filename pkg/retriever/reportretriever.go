@@ -4,7 +4,6 @@
 package retriever
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -15,10 +14,13 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/uuid"
 	"github.com/stolostron/insights-client/pkg/config"
 	"github.com/stolostron/insights-client/pkg/monitor"
 	"github.com/stolostron/insights-client/pkg/types"
@@ -28,10 +30,11 @@ import (
 	"k8s.io/client-go/dynamic"
 )
 
+var lock = sync.RWMutex{}
+
 // Retriever struct
 type Retriever struct {
-	CCXUrl          string
-	ContentURL      string
+	ReportUrl       string
 	Client          *http.Client
 	Token           string // token to connect to CRC
 	DisconnectedEnv bool
@@ -44,9 +47,10 @@ type serializedAuth struct {
 	Auth string `json:"auth"`
 }
 
-// NewRetriever ...
-func NewRetriever(ccxurl string, ContentURL string, client *http.Client,
-	token string) *Retriever {
+// NewRetriever creates a Retriever. If client is nil, a default HTTP client is created using
+// the provided tlsCfg for TLS settings. Pass nil for tlsCfg to use Go defaults.
+func NewRetriever(ReportUrl string, client *http.Client,
+	token string, tlsCfg *tls.Config) *Retriever {
 	if client == nil {
 		clientTransport := &http.Transport{
 			Proxy: knet.NewProxierWithNoProxyCIDR(http.ProxyFromEnvironment),
@@ -57,8 +61,11 @@ func NewRetriever(ccxurl string, ContentURL string, client *http.Client,
 			TLSHandshakeTimeout: 10 * time.Second,
 			DisableKeepAlives:   true,
 		}
+		if tlsCfg == nil {
+			tlsCfg = &tls.Config{MinVersion: tls.VersionTLS12} // #nosec G402
+		}
 		if config.Cfg.CACert != "" {
-			// If caCert is defiend in Insights-client deployment - we need to use it in http client
+			// If caCert is defined in Insights-client deployment - we need to use it in http client
 			decodedCert, err := b64.URLEncoding.DecodeString(config.Cfg.CACert)
 			if err != nil {
 				// Exit because this is an unrecoverable configuration problem.
@@ -66,19 +73,14 @@ func NewRetriever(ccxurl string, ContentURL string, client *http.Client,
 			}
 			caCertPool := x509.NewCertPool()
 			caCertPool.AppendCertsFromPEM(decodedCert)
-
-			tlsCfg := &tls.Config{
-				MinVersion: tls.VersionTLS12,
-				RootCAs:    caCertPool,
-			}
-			clientTransport.TLSClientConfig = tlsCfg
+			tlsCfg.RootCAs = caCertPool
 		}
+		clientTransport.TLSClientConfig = tlsCfg
 		client = &http.Client{Transport: clientTransport}
 	}
 	r := &Retriever{
-		Client:     client,
-		CCXUrl:     ccxurl,
-		ContentURL: ContentURL,
+		Client:    client,
+		ReportUrl: ReportUrl,
 	}
 	if token == "" {
 		r.DisconnectedEnv = r.setUpRetriever()
@@ -116,7 +118,7 @@ func (r *Retriever) StartTokenRefresh() error {
 			err = fmt.Errorf("pull-secret does not exist in openshift-config namespace: %v", err)
 		} else if errors.IsForbidden(err) {
 			glog.V(2).Infof("Operator does not have permission to check pull-secret: %v", err)
-			err = fmt.Errorf("Operator does not have permission to check pull-secret: %v", err)
+			err = fmt.Errorf("operator does not have permission to check pull-secret: %v", err)
 		} else {
 			err = fmt.Errorf("could not check pull-secret: %v", err)
 		}
@@ -127,13 +129,13 @@ func (r *Retriever) StartTokenRefresh() error {
 			var pullSecret serializedAuthMap
 			if err := json.Unmarshal(data, &pullSecret); err != nil {
 				glog.Errorf("Unable to unmarshal cluster pull-secret: %v", err)
-				err = fmt.Errorf("Unable to unmarshal cluster pull-secret: %v", err)
+				err = fmt.Errorf("unable to unmarshal cluster pull-secret: %v", err)
 				return err
 			}
 			if auth, ok := pullSecret.Auths["cloud.openshift.com"]; ok {
 				token := strings.TrimSpace(auth.Auth)
 				if strings.Contains(token, "\n") || strings.Contains(token, "\r") {
-					return fmt.Errorf("Cluster authorization token is not valid: contains newlines")
+					return fmt.Errorf("cluster authorization token is not valid: contains newlines")
 				}
 				if len(token) > 0 {
 					glog.V(2).Info("Found cloud.openshift.com token ")
@@ -147,9 +149,9 @@ func (r *Retriever) StartTokenRefresh() error {
 			return fmt.Errorf(".dockerconfigjson token is not found")
 		}
 	} else {
-		return fmt.Errorf("Could not get pull-secret")
+		return fmt.Errorf("could not get pull-secret")
 	}
-	return fmt.Errorf("Unknown error during TokenRefresh")
+	return fmt.Errorf("unknown error during TokenRefresh")
 }
 
 func clusterNeedsCCX(cluster types.ManagedClusterInfo, clusterCCXMap map[string]bool) bool {
@@ -178,13 +180,13 @@ func (r *Retriever) RetrieveReport(
 			glog.Infof("Retrieve Report for cluster %s", cluster.Namespace)
 			output <- types.ProcessorData{
 				ClusterInfo: cluster,
-				Reports:     types.Reports{},
+				Report:      types.ReportBody{},
 			}
 			continue
 		}
 
 		glog.Infof("Retrieve CCX Report for cluster %s", cluster.Namespace)
-		req, err := r.CreateInsightsRequest(context.TODO(), r.CCXUrl, cluster, hubID)
+		req, err := r.CreateInsightsRequest(context.TODO(), r.ReportUrl, cluster, hubID)
 		if err != nil {
 			handleCCXRequestErr(err, "Error creating HttpRequest for cluster %s (%s), %v", output, cluster)
 			continue
@@ -213,7 +215,7 @@ func handleCCXRequestErr(
 	glog.Warningf(message, cluster.Namespace, cluster.ClusterID, err)
 	output <- types.ProcessorData{
 		ClusterInfo: cluster,
-		Reports:     types.Reports{},
+		Report:      types.ReportBody{},
 	}
 }
 
@@ -224,21 +226,18 @@ func (r *Retriever) CreateInsightsRequest(
 	cluster types.ManagedClusterInfo,
 	hubID string,
 ) (*http.Request, error) {
-	glog.Infof(
-		"Creating Request for cluster %s (%s) using Insights URL %s",
-		cluster.Namespace,
-		cluster.ClusterID,
-		r.CCXUrl,
-	)
-	reqCluster := types.PostBody{
-		Clusters: []string{
-			cluster.ClusterID,
-		},
+	// ClusterID originates from the spoke-controlled id.openshift.io ClusterClaim;
+	// reject anything that is not a well-formed UUID, so it cannot traverse or
+	// rewrite the Insights API path.
+	if _, err := uuid.Parse(cluster.ClusterID); err != nil {
+		glog.Warningf("Refusing Insights request: ClusterID is not a valid UUID")
+		return nil, fmt.Errorf("clusterID is not a valid UUID")
 	}
-	reqBody, _ := json.Marshal(reqCluster)
-	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(reqBody))
+	reqURL := endpoint + "/cluster/" + url.PathEscape(cluster.ClusterID) + "/reports"
+	glog.Infof("Creating Insights report request")
+	req, err := http.NewRequest("GET", reqURL, nil)
 	if err != nil {
-		glog.Warningf("Error creating HttpRequest for cluster %s (%s), %v", cluster.Namespace, cluster.ClusterID, err)
+		glog.Warningf("Error creating Insights report HttpRequest: %v", err)
 		return nil, err
 	}
 	// userAgent for value will be updated to insights-client once the
@@ -275,10 +274,11 @@ func (r *Retriever) CallInsights(req *http.Request, cluster types.ManagedCluster
 		}
 		glog.V(2).Infof("Response status for report %v", res.Status)
 		glog.V(3).Infof("Response body for report  %v", req.Body)
-		glog.V(3).Infof("Response header for report %v", req.Header)
-		return types.ResponseBody{}, e.New("No Success HTTP Response code ")
+		return types.ResponseBody{}, e.New("no Success HTTP Response code ")
 	}
-	defer res.Body.Close()
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(res.Body)
 	data, _ := io.ReadAll(res.Body)
 	// unmarshal response data into the ResponseBody struct
 	unmarshalError := json.Unmarshal(data, &responseBody)
@@ -296,43 +296,29 @@ func (r *Retriever) GetPolicyInfo(
 	cluster types.ManagedClusterInfo,
 ) (types.ProcessorData, error) {
 	glog.V(2).Infof("Starting GetPolicyInfo for cluster %s (%s)", cluster.Namespace, cluster.ClusterID)
-	reports := types.Reports{}
-	for _, clusterErrored := range responseBody.Errors {
-		glog.Warningf("No Reports returned from CCX Insights for cluster: %s", clusterErrored)
-		glog.V(2).Infof("Errors returned from CCX Insights for cluster : %v", responseBody)
+	report := types.ReportBody{}
+	// convert report data into []byte
+	reportBytes, _ := json.Marshal(responseBody.Report)
+	// unmarshal response data into the Report struct
+	unmarshalError := json.Unmarshal(reportBytes, &report)
+	if unmarshalError != nil {
+		glog.Infof(
+			"Error unmarshalling Policy %v for cluster %s (%s)",
+			unmarshalError,
+			cluster.Namespace,
+			cluster.ClusterID,
+		)
+		return types.ProcessorData{}, unmarshalError
 	}
 
-	// loop through the clusters in the response and pull out the report violations
-	for reportClusterID := range responseBody.Reports {
-		if reportClusterID == cluster.ClusterID {
-			// convert report data into []byte
-			reportBytes, _ := json.Marshal(responseBody.Reports[reportClusterID])
-			// unmarshal response data into the Report struct
-			unmarshalError := json.Unmarshal(reportBytes, &reports)
-			if unmarshalError != nil {
-				glog.Infof(
-					"Error unmarshalling Policy %v for cluster %s (%s)",
-					unmarshalError,
-					cluster.Namespace,
-					cluster.ClusterID,
-				)
-				return types.ProcessorData{}, unmarshalError
-			}
-
-			glog.V(2).Infof(
-				"Successfully requested report for cluster %s (%s). Proceeding to processor.",
-				cluster.Namespace,
-				cluster.ClusterID,
-			)
-			return types.ProcessorData{
-				ClusterInfo: cluster,
-				Reports:     reports,
-			}, nil
-		}
-	}
+	glog.V(2).Infof(
+		"Successfully requested report for cluster %s (%s). Proceeding to processor.",
+		cluster.Namespace,
+		cluster.ClusterID,
+	)
 	return types.ProcessorData{
 		ClusterInfo: cluster,
-		Reports:     types.Reports{},
+		Report:      responseBody.Report,
 	}, nil
 }
 
@@ -351,11 +337,6 @@ func (r *Retriever) FetchClusters(
 			err := r.StartTokenRefresh()
 			if err != nil {
 				glog.Warningf("Unable to get CRC Token, Using previous Token: %v", err)
-			}
-			if len(ContentsMap) < 1 {
-				r.InitializeContents(hubID, dynamicClient)
-			} else if len(ContentsMap) > 0 && r.GetContentConfigMap(dynamicClient) == nil {
-				r.CreateInsightContentConfigmap(dynamicClient)
 			}
 		}
 		if len(monitor.GetManagedClusterInfo()) > 0 {

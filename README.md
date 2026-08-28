@@ -22,13 +22,13 @@ Uses Red Hat Connected Customer Experience (CCX) to provide health check insight
 ### Environment Variables
 Control the behavior of this service with these environment variables.
 
-Name             | Required | Default Value                           | Description
----------------- | -------- | --------------------------------------- | -----------
-HTTP_TIMEOUT     | no       | 180000                                  | 3 minute timeout to process a single requests
-CCX_SERVER       | no       | http://localhost:8080/api/v1/clusters   | CCX server url (prod will use: `https://cloud.redhat.com/api/insights-results-aggregator/v2`)
-CCX_TOKEN        | no       | Not set                                 | If not set client will get cloud.openshift.com token from secret `openshift-config`
-POLL_INTERVAL    | no       | 30                                      | 30 minute default polling interval cloud.redhat.com
-REQUEST_INTERVAL | no       | 1                                       | 1 second Interval between 2 consecutive Insights requests
-CACERT           | no       | Not set                                 | Used for dev & test ONLY
+Name             | Required | Default Value                                                   | Description
+---------------- | -------- | --------------------------------------------------------------- | -----------
+HTTP_TIMEOUT     | no       | 180000                                                          | 3 minute timeout to process a single requests
+CCX_SERVER       | no       | https://console.redhat.com/api/insights-results-aggregator/v2   | CCX server public API
+CCX_TOKEN        | no       | Not set                                                         | If not set client will get cloud.openshift.com token from secret `openshift-config`
+POLL_INTERVAL    | no       | 30                                                              | 30 minute default polling interval cloud.redhat.com
+REQUEST_INTERVAL | no       | 1                                                               | 1 second Interval between 2 consecutive Insights requests
+CACERT           | no       | Not set                                                         | Used for dev & test ONLY
 
 Rebuild: 2022-09-16

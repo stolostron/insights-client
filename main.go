@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"flag"
 	"fmt"
@@ -36,15 +37,24 @@ func main() {
 	config.SetupConfig()
 
 	dynamicClient := config.GetDynamicClient()
+
+	// Read the cluster's APIServer TLS security profile and poll for changes.
+	// On change, the poller exits the process so the Deployment controller restarts
+	// the pod with the updated TLS config.
+	tlsPollCtx := context.Background()
+	tlsCfg, initialProfile, profileOK := config.GetTLSConfig(tlsPollCtx, dynamicClient)
+	go config.PollAPIServerTLSProfile(tlsPollCtx, dynamicClient, initialProfile, profileOK)
 	fetchClusterIDs := make(chan types.ManagedClusterInfo)
 	fetchPolicyReports := make(chan types.ProcessorData)
 
 	monitor := monitor.NewClusterMonitor()
 	go monitor.WatchClusters()
 
-	// Set up Retriever and cache the Insights content data
-	ret := retriever.NewRetriever(config.Cfg.CCXServer+"/clusters/reports",
-		config.Cfg.CCXServer+"/content", nil, config.Cfg.CCXToken)
+	// Set up Retriever and cache the Insights data.
+	// The Retriever connects to an external endpoint (CCX/Insights), so it uses
+	// a permissive TLS config instead of the cluster profile — the external server's
+	// TLS requirements are outside the cluster admin's control.
+	ret := retriever.NewRetriever(config.Cfg.CCXServer, nil, config.Cfg.CCXToken, nil)
 	//Wait for hub cluster id to make GET API call
 	hubID := "-1"
 	for hubID == "-1" {
@@ -57,46 +67,22 @@ func main() {
 		time.Sleep(2 * time.Second)
 	}
 
-	if !ret.DisconnectedEnv {
-		// Wait until we can create the contents map , which will be used to lookup report details
-		contents := ret.InitializeContents(hubID, dynamicClient)
-		retryCount := 1
-		for contents < 0 {
-			glog.Info("Contents Map not ready. Retrying.")
-			time.Sleep(time.Duration(min(300, retryCount*2)) * time.Second)
-			contents = ret.InitializeContents(hubID, dynamicClient)
-			retryCount++
-		}
-	}
-
 	// Fetch the reports for each cluster & create the PolicyReport resources for each violation.
 	go ret.RetrieveReport(hubID, fetchClusterIDs, fetchPolicyReports, monitor.ClusterNeedsCCX, ret.DisconnectedEnv)
 
 	processor := processor.NewProcessor()
 	go processor.ProcessPolicyReports(fetchPolicyReports, dynamicClient)
 
-	refreshToken := true
-	if config.Cfg.CCXToken != "" || ret.DisconnectedEnv {
-		refreshToken = false
-	}
+	refreshToken := config.Cfg.CCXToken != "" || ret.DisconnectedEnv
 	//start triggering reports for clusters
 	go ret.FetchClusters(monitor, fetchClusterIDs, refreshToken, hubID, dynamicClient)
 
 	router := mux.NewRouter()
 
-	// Configure TLS
-	cfg := &tls.Config{
-		MinVersion:               tls.VersionTLS12,
-		CurvePreferences:         []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
-		PreferServerCipherSuites: true,
-		CipherSuites: []uint16{
-			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-		},
-	}
 	srv := &http.Server{
 		Addr:              config.Cfg.ServicePort,
 		Handler:           router,
-		TLSConfig:         cfg,
+		TLSConfig:         tlsCfg,
 		ReadHeaderTimeout: time.Duration(config.Cfg.HTTPTimeout) * time.Millisecond,
 		ReadTimeout:       time.Duration(config.Cfg.HTTPTimeout) * time.Millisecond,
 		WriteTimeout:      time.Duration(config.Cfg.HTTPTimeout) * time.Millisecond,
@@ -106,12 +92,4 @@ func main() {
 	glog.Info("insights-client listening on", config.Cfg.ServicePort)
 	log.Fatal(srv.ListenAndServeTLS("./sslcert/tls.crt", "./sslcert/tls.key"),
 		" Use ./setup.sh to generate certificates for local development.")
-}
-
-// Returns the smaller of two ints
-func min(a, b int) int {
-	if a > b {
-		return b
-	}
-	return a
 }

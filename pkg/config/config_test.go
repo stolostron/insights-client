@@ -22,7 +22,7 @@ func Test_SetDefault_01(t *testing.T) {
 // Should use value from environment variable if it exists.
 func Test_SetDefault_02(t *testing.T) {
 
-	os.Setenv("TEST_ENV_VARIABLE", "value-from-env")
+	_ = os.Setenv("TEST_ENV_VARIABLE", "value-from-env")
 	property := ""
 	setDefault(&property, "TEST_ENV_VARIABLE", "default-value")
 
@@ -44,12 +44,46 @@ func Test_SetDefaultInt_01(t *testing.T) {
 // Should use value from environment variable if it exists.
 func Test_SetDefaultInt_02(t *testing.T) {
 
-	os.Setenv("TEST_ENV_VARIABLE", "9999")
+	_ = os.Setenv("TEST_ENV_VARIABLE", "9999")
 	var property int
 	setDefaultInt(&property, "TEST_ENV_VARIABLE", 0000)
 
 	if property != 9999 {
 		t.Errorf("Failed testing setDefaultInt()  Expected: %d  Got: %d", 9999, property)
+	}
+}
+
+// Should use default value when environment variable does not exist.
+func Test_SetDefaultSecret_01(t *testing.T) {
+
+	property := ""
+	setDefaultSecret(&property, "ENV_VARIABLE_NOT_DEFINED", "default-value")
+
+	if property != "default-value" {
+		t.Errorf("Failed testing setDefaultSecret()  Expected: %s  Got: %s", "default-value", property)
+	}
+}
+
+// Should use value from environment variable if it exists.
+func Test_SetDefaultSecret_02(t *testing.T) {
+
+	_ = os.Setenv("TEST_SECRET_VARIABLE", "secret-from-env")
+	property := ""
+	setDefaultSecret(&property, "TEST_SECRET_VARIABLE", "default-value")
+
+	if property != "secret-from-env" {
+		t.Errorf("Failed testing setDefaultSecret()  Expected: %s  Got: %s", "secret-from-env", property)
+	}
+}
+
+// Should not set default value when defaultVal is empty.
+func Test_SetDefaultSecret_03(t *testing.T) {
+
+	property := ""
+	setDefaultSecret(&property, "ENV_VARIABLE_NOT_DEFINED", "")
+
+	if property != "" {
+		t.Errorf("Failed testing setDefaultSecret()  Expected empty string  Got: %s", property)
 	}
 }
 
@@ -66,7 +100,7 @@ func Test_SetDefaultBool_01(t *testing.T) {
 // Should use value from environment variable if it exists.
 func Test_SetDefaultBool_02(t *testing.T) {
 
-	os.Setenv("TEST_ENV_VARIABLE", "true")
+	_ = os.Setenv("TEST_ENV_VARIABLE", "true")
 	var property bool
 	setDefaultBool(&property, "TEST_ENV_VARIABLE", false)
 

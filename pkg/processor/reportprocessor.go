@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/stolostron/insights-client/pkg/retriever"
 	"github.com/stolostron/insights-client/pkg/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -63,40 +62,26 @@ func getPolicyReportResults(
 ) []v1beta1.PolicyReportResult {
 	var clusterViolations []v1beta1.PolicyReportResult
 	for _, report := range reports {
-		// Find the correct Insight content data from cache
-		reportContentData := retriever.ContentsMap[report.Key]
 		// Convert details data to string
-		jsonStr, _ := json.Marshal(report.Details)
+		jsonStr, _ := json.Marshal(report.ExtraData)
 		extraData := string(jsonStr)
-		if reportContentData != nil && !strings.Contains(report.Component, "tutorial_rule") {
-			var contentData types.FormattedContentData
-			reportContentDataBytes, _ := json.Marshal(reportContentData)
-			unmarshalError := json.Unmarshal(reportContentDataBytes, &contentData)
-			if unmarshalError == nil {
-				clusterViolations = append(clusterViolations, v1beta1.PolicyReportResult{
-					Policy:      report.Key,
-					Description: contentData.Description,
-					Scored:      false,
-					Category:    FilterOpenshiftCategory(contentData.Tags),
-					Source:      "insights",
-					Timestamp:   metav1.Timestamp{Seconds: time.Now().Unix(), Nanos: int32(time.Now().UnixNano())},
-					Result:      "fail",
-					Properties: map[string]string{
-						"created_at": contentData.PublishDate,
-						"total_risk": strconv.Itoa(contentData.TotalRisk),
-						"component":  report.Component,
-						"extra_data": extraData,
-					},
-				})
-			} else {
-				glog.Infof(
-					"Error unmarshalling Report %v for cluster %s (%s)",
-					unmarshalError,
-					clusterInfo.Namespace,
-					clusterInfo.ClusterID,
-				)
-			}
-		}
+		clusterViolations = append(clusterViolations, v1beta1.PolicyReportResult{
+			Policy:      report.RuleID,
+			Description: report.Description,
+			Scored:      false,
+			Category:    FilterOpenshiftCategory(report.Tags),
+			Source:      "insights",
+			Timestamp:   metav1.Timestamp{Seconds: time.Now().Unix(), Nanos: int32(time.Now().UnixNano())},
+			Result:      "fail",
+			Properties: map[string]string{
+				"created_at": report.Impacted,
+				"total_risk": strconv.Itoa(report.TotalRisk),
+				// "component":  report.Component,
+				"extra_data": extraData,
+				"resolution": report.Resolution,
+				"reason":     report.Reason,
+			},
+		})
 	}
 	return clusterViolations
 }
@@ -129,7 +114,7 @@ func (p *Processor) createUpdatePolicyReports(input chan types.ProcessorData, dy
 	}
 
 	clusterViolations := getPolicyReportResults(
-		data.Reports.Reports,
+		data.Report.Data,
 		data.ClusterInfo,
 	)
 
