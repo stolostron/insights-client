@@ -29,6 +29,6 @@ CCX_SERVER       | no       | https://console.redhat.com/api/insights-results-ag
 CCX_TOKEN        | no       | Not set                                                         | If not set client will get cloud.openshift.com token from secret `openshift-config`
 POLL_INTERVAL    | no       | 30                                                              | 30 minute default polling interval cloud.redhat.com
 REQUEST_INTERVAL | no       | 1                                                               | 1 second Interval between 2 consecutive Insights requests
-CACERT           | no       | Not set                                                         | Used for dev & test ONLY
+CACert           | no       | Not set                                                         | Used for dev & test ONLY
 
 Rebuild: 2022-09-16

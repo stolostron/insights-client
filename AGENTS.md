@@ -26,7 +26,7 @@ For local development, run `sh setup.sh` to generate the self-signed certificate
 
 ## Configuration
 
-The service reads `HTTP_TIMEOUT`, `CCX_SERVER`, `CCX_TOKEN`, `POLL_INTERVAL`, `REQUEST_INTERVAL`, and `CACERT`. `CCX_TOKEN` can instead be obtained from the `openshift-config` secret when unset. See `README.md` for defaults and intended development-only settings.
+The service reads `HTTP_TIMEOUT`, `CCX_SERVER`, `CCX_TOKEN`, `POLL_INTERVAL`, `REQUEST_INTERVAL`, and `CACert`. `CCX_TOKEN` can instead be obtained from the `openshift-config` secret when unset. See `README.md` for defaults and intended development-only settings.
 
 ## Repository Conventions
 
@@ -52,7 +52,7 @@ Fetch and apply the relevant skill when the task matches its domain.
 
 | Skill | When to use |
 |---|---|
-| [bug-specialist](https://raw.githubusercontent.com/OpenShift-Fleet/agentic-sdlc/main/skills/bug-specialist/SKILL.md) | Bug triage, reproduction steps, fix planning |
+| [bug-specialist](https://raw.githubusercontent.com/OpenShift-Fleet/agentic-sdlc/654b81334e8b7f9a8c8613bbfa7af2ef3832db69/skills/bug-specialist/SKILL.md) | Bug triage, reproduction steps, fix planning |
 | [epic-specialist](https://raw.githubusercontent.com/OpenShift-Fleet/agentic-sdlc/main/skills/epic-specialist/SKILL.md) | Multi-sprint epics with outcomes |
 | [feature-specialist](https://raw.githubusercontent.com/OpenShift-Fleet/agentic-sdlc/main/skills/feature-specialist/SKILL.md) | Large customer-facing capabilities |
 | [initiative-specialist](https://raw.githubusercontent.com/OpenShift-Fleet/agentic-sdlc/main/skills/initiative-specialist/SKILL.md) | Multi-team strategic programs |
