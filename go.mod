@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/go-logr/logr v1.4.3 // indirect
-	github.com/golang/glog v1.2.4
+	github.com/golang/glog v1.2.5
 	github.com/gorilla/mux v1.8.1
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kennygrant/sanitize v1.2.4
