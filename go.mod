@@ -22,7 +22,7 @@ require (
 	k8s.io/utils v0.0.0-20260707023825-cf1189d6abe3 // indirect
 	open-cluster-management.io/api v0.8.0
 	sigs.k8s.io/controller-runtime v0.25.1 // indirect
-	sigs.k8s.io/wg-policy-prototypes v0.0.0-20240327135653-0fc2ddc5d3e3
+	sigs.k8s.io/wg-policy-prototypes v0.0.0-20250521155141-ed0ca5a1c778
 )
 
 require (
