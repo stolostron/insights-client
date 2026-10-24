@@ -27,7 +27,7 @@ require (
 
 require (
 	github.com/google/uuid v1.6.0
-	github.com/openshift/api v0.0.0-20261002115817-f8795cdde518
+	github.com/openshift/api v0.0.0-20261023091600-9809689a2448
 	github.com/openshift/controller-runtime-common v0.0.0-20261008111711-8ec0dc844066
 )
 
