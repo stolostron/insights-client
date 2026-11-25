@@ -329,3 +329,40 @@ func Test_filterOpenshiftCategory(t *testing.T) {
 
 	assert.Equal(t, "test1,test2", filtered, "Expected category list to exclude openshift")
 }
+
+// Test_getPolicyReportResults_extraData verifies that all keys of the
+// extra_data object returned by the CCX report are preserved in the
+// extra_data property of the PolicyReport result. The report data contains
+// keys (result, mcps) that are not part of any fixed struct, so ExtraData
+// must be unmarshalled into a generic map.
+func Test_getPolicyReportResults_extraData(t *testing.T) {
+	respBody := types.ResponseBody{}
+	UnmarshalFile("createreporttest.json", &respBody, t)
+	clusterInfo := types.ManagedClusterInfo{Namespace: "testCluster", ClusterID: "972ea7cf-7428-438f-ade8-12ac4794ede0"}
+
+	results := getPolicyReportResults(respBody.Report.Data, clusterInfo)
+	assert.Equal(t, len(respBody.Report.Data), len(results), "Expected one PolicyReport result per report entry")
+
+	for i, report := range respBody.Report.Data {
+		result := results[i]
+		assert.Equal(t, v1beta1.PolicyResult("fail"), result.Result, "Expected result to be fail")
+		assert.Equal(t, report.RuleID, result.Policy, "Expected policy to match rule id")
+
+		var extraData map[string]interface{}
+		err := json.Unmarshal([]byte(result.Properties["extra_data"]), &extraData)
+		assert.NoError(t, err, "Expected extra_data to be valid JSON")
+
+		// All keys of the original extra_data object must be preserved.
+		for key, value := range report.ExtraData {
+			assert.Contains(t, extraData, key, "Expected extra_data key %q to be preserved", key)
+			assert.Equal(t, value, extraData[key], "Expected value of extra_data key %q to be preserved", key)
+		}
+	}
+
+	// The report contains entries with keys that a fixed ExtraData struct
+	// would have dropped - make sure they really are there.
+	assert.Contains(t, respBody.Report.Data[0].ExtraData, "result", "Test data must contain a non-struct extra_data key")
+	assert.Contains(t, respBody.Report.Data[1].ExtraData, "mcps", "Test data must contain a non-struct extra_data key")
+	assert.Contains(t, results[0].Properties["extra_data"], "result", "Expected the result key to be preserved in extra_data")
+	assert.Contains(t, results[1].Properties["extra_data"], "mcps", "Expected the mcps key to be preserved in extra_data")
+}
